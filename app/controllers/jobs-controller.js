@@ -1,5 +1,6 @@
 import * as greenService from './../services/greenhouse-service.js';
 import { response } from 'express';
+import axios from 'axios';
 
 
 export const get = async (request, response) => {
@@ -10,6 +11,10 @@ export const get = async (request, response) => {
 
         // // add companies_list to the response object
         // setSuccessfulResponse(companies_list,response);
+
+        
+
+
         response.json({companies_list: companies_list});
 
 
