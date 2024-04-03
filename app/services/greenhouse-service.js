@@ -7,7 +7,7 @@ export const companies_list = function getCompanies() {
     const greenUrl = "https://boards.greenhouse.io/";
     const greenApis = new Set();
 
-    const csvFile = '/Users/ritvikparamkusham/Documents/Projects/job-boards/auto-boarding/job-boards/app/services/greenhouse.csv';
+    const csvFile = 'app/services/greenhouse.csv';
     
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
