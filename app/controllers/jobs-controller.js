@@ -6,17 +6,12 @@ export const get = async (request, response) => {
     // try {
         const csvFile = 'greenhouse.csv';
         const companies_list = greenService.companies_list()
-        // convert the companies_list to json and add it to response
-        const json_companies_list = JSON.stringify(companies_list);
-        // add the json_companies_list to response
-        response.status(200).send(json_companies_list);
+        console.log(companies_list);
 
-        //  setSuccessfulResponse(remindersFromDb,response);
+        // // add companies_list to the response object
+        // setSuccessfulResponse(companies_list,response);
+        response.json({companies_list: companies_list});
 
-    // } catch (error) {
-    //     // setErrorResponse(error,response); 
-    //     response.status(500).send('No Companies');
-    // }
 
 }
 
