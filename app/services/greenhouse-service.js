@@ -1,5 +1,5 @@
 // const fs = require('fs');
-
+import { jobChecker } from './job_match-service.js';
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
@@ -42,7 +42,11 @@ export const getJobs = async ()=>{
     const company_list = companies_list();
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Sheet1');
+    
     let maxCount = 0;
+
+    // const jobChecker = new JobChecker();
+
     worksheet.columns = [
         { header: 'Company Name', key: 'company_name', width: 20 },
         { header: 'Job Title', key: 'job_title', width: 50 },
@@ -82,8 +86,17 @@ export const getJobs = async ()=>{
                         data["location"]= location.innerHTML
                         
                     })
-                    worksheet.addRow(data);
-                    maxCount++;
+                    const title_to_check = data["job_title"];
+                    console.log(title_to_check);
+                    if (jobChecker.isJobPresentAccept(title_to_check)) {
+                        if (!jobChecker.isJobPresentReject(title_to_check)) {
+                            // console.log(`'${title_to_check}'`);
+                            worksheet.addRow(data);
+                            maxCount++;
+                        }
+                    }
+                    // worksheet.addRow(data);
+                    // maxCount++;
                 })
                 
                 

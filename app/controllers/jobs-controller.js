@@ -9,12 +9,6 @@ export const get = async (request, response) => {
         const companies_list = greenService.companies_list()
         console.log(companies_list);
 
-        // // add companies_list to the response object
-        // setSuccessfulResponse(companies_list,response);
-
-        
-
-
         response.json({companies_list: companies_list});
 
 
