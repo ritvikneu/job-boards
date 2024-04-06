@@ -66,12 +66,7 @@ class LocationChecker {
             return true;
         }
     }
-
-
-
 }
-
-
 class FilterJobs {
 
     constructor() {
@@ -104,7 +99,7 @@ class FilterJobs {
         for (let r = 0; r <= validParts.length; r++) {
             for (let combo of this.getCombinations(validParts, r)) {
                 let searchWord = combo.join(' ');
-                let searchWordLen = searchWord.length;
+                // let searchWordLen = searchWord.length;
                 if (checkTitle) {
                     if (this.titleChecker.isJobPresentAccept(searchWord)) {
                         return true;
@@ -125,6 +120,18 @@ class FilterJobs {
                     }
                 }
             }
+        }
+        return false;
+    }
+
+    postingDateChecker(postingDate) {
+        let currDate = new Date();
+        // format the current date to the same format as the posting date(YYYY-MM-DD)
+        let formatted_date = new Date(postingDate);
+        const diffTime = Math.abs(currDate - formatted_date);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 30) {
+            return true;
         }
         return false;
     }

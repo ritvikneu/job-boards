@@ -1,5 +1,3 @@
-// const fs = require('fs');
-// import { jobChecker } from './job_match-service.js';
 import { filterJob } from './filtering-service.js';
 import { readFileSync } from 'fs';
 import axios from 'axios';
@@ -15,6 +13,7 @@ export const companies_list = function getCompanies() {
     const company_set = new Set();
     const csvFile = 'app/data/greenhouse_companies.csv';
     let company_list = [];
+    const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
     // console.log(rows);
@@ -26,6 +25,8 @@ export const companies_list = function getCompanies() {
                 // console.log(company[0]);
                 // greenApis.add(greenUrl + company[0]);
                 if (!company_set.has(company[0])) {
+                    // write all the compnies to a csv file
+                    csvCompanyNames.push(company[0]);
                     company_set.add(company[0]);
                     company_list.push({
                         name: company[0],
@@ -42,12 +43,9 @@ export const companies_list = function getCompanies() {
 export const getJobs = async () => {
     const GH_URL = "https://boards.greenhouse.io"
     const company_list = companies_list();
-
     // create a list of greenhouse companies intialize to empty
     let greenhouse_list = [];
-
     let maxCount = 0;
-
 
     for (let i = 0; i < company_list.length; i++) {
         let company = company_list[i];
@@ -63,12 +61,11 @@ export const getJobs = async () => {
             // Calculate the size of the headers in bytes
             const headerSize = JSON.stringify(headers).length;
             // console.log(company.name + " success" + response.status + " " + headerSize)
-            if (response.status == 200 && headerSize == 469) {
+            if (response.status == 200) {
 
-                // /*
                 const htmlDom = new jsdom.JSDOM(response.data);
                 htmlDom.window.document.querySelectorAll('section').forEach(section => {
-                    section.querySelectorAll('div.opening').forEach(opening => {
+                    section.querySelectorAll('div.opening').forEach(async opening => {
                         let data = {}
                         opening.querySelectorAll('a').forEach(link => {
 
@@ -89,29 +86,72 @@ export const getJobs = async () => {
                         location_to_check = location_to_check.toLowerCase();
                         const location_matched = filterJob.matchJobsToChecker(location_to_check, false, true);
 
+                        let gh_job_link = data["job_link"];
+
                         if (title_matched && location_matched) {
                             // csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"]]);
-                            greenhouse_list.push(data);
-                            maxCount++;
+                            //wait for the job posting date
+                            let posting_date = await getJobPostingDates(gh_job_link);
+                            data["posting_date"] = posting_date;
+                            // if the posting date is not null and less than 30 days from current then push the data to the greenhouse list
+                            if (posting_date && filterJob.postingDateChecker(posting_date)) {
+                                greenhouse_list.push(data);
+                                maxCount++;
+                            }
+                            // greenhouse_list.push(data);
+                            // maxCount++;
                         }
                     })
                 });
             }
             else {
-                console.log(company.name + " failed " + response.status + " " + headerSize)
+                console.log(company.name + " failed ")
             }
 
         }
         catch (err) {
             response = null;
 
-            console.log(err.message)
+            // console.log(err.message)
         }
     }
 
-    writeToCsv(greenhouse_list);
-    writeToExcel(greenhouse_list);
+
+
+    writeToCsv(greenhouse_list,"greenhouse");
+    writeToExcel(greenhouse_list,"greenhouse");
 
     return greenhouse_list;
 
 }
+
+export const getJobPostingDates = async (job_link) => {
+
+
+    let response = null;
+    try {
+        response = await axios.get(job_link);
+        const headers = response.headers;
+
+        // Calculate the size of the headers in bytes
+        const headerSize = JSON.stringify(headers).length;
+        // console.log(job_link + " success" + response.status + " " + headerSize)
+        if (response.status == 200) {
+            const htmlDom = new jsdom.JSDOM(response.data);
+            // fetch the job posting date from the script tag
+            const job_posting_content = htmlDom.window.document.querySelector('script[type="application/ld+json"]').innerHTML;
+            const job_posting_date = JSON.parse(job_posting_content).datePosted;
+            // console.log(job_posting_date);
+            return job_posting_date;
+        }
+        else {
+            console.log(job_link + " failed ")
+        }
+
+    }
+    catch (err) {
+        response = null;
+        // console.log(err.message)
+    }
+}
+
