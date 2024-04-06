@@ -15,6 +15,7 @@ ghService.getJobs();
 // locationService.country_match();
 // locationService.getCombo("Senior Engineer");
 // locationService.country_match_loc();
+// ghService.getJobPostingDates("https://boards.greenhouse.io/arkestroinc/jobs/4298280007?gh_src=Cervin+Ventures+job+board");
 // const connection = mongoose.connect('mongodb://127.0.0.1:27017/local');
 
 
