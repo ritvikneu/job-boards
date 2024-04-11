@@ -3,21 +3,14 @@ import mongoose from "mongoose";
 import cors from 'cors';
 import route from "./routes/index.js";
 import * as ghService from "./services/greenhouse-service.js";
+import * as leverService from "./services/lever-service.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-// app.use(express.urlencoded());
 route(app);
-// console.log(ghService.companies_list())
-// debugger;
-// ghServicePromise.getFilteredGreenHouseJobs();
 ghService.getFilteredGreenHouseJobs();
-// locationService.country_match();
-// locationService.getCombo("Senior Engineer");
-// locationService.country_match_loc();
-// ghService.getJobPostingDates("https://boards.greenhouse.io/arkestroinc/jobs/4298280007?gh_src=Cervin+Ventures+job+board");
-// const connection = mongoose.connect('mongodb://127.0.0.1:27017/local');
+// leverService.getFilteredLeverJobs();
 
 
 export {
