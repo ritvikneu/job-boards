@@ -6,13 +6,14 @@ import jsdom from 'jsdom';
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 
 export const getAllCompanies = async () => {
-    console.log("inside get all companies");
+    console.log("inside get all companies for lever");
 
-    const greenUrl = "https://boards.greenhouse.io/";
+    const leverUrl = "https://jobs.lever.co/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/greenhouse_companies.csv';
+    const csvFile = 'app/data/lever_companies.csv';
     let company_list = [];
+    const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
     // console.log(rows);
@@ -20,31 +21,33 @@ export const getAllCompanies = async () => {
         const splitRow = row.split(',');
         if (splitRow.length > 0) {
             const company = splitRow[0].split('/');
-            let companyName = company[0].toLowerCase();
             if (company.length > 0) {
-                if (!company_set.has(companyName)) {
+                // console.log(company[0]);
+                // greenApis.add(greenUrl + company[0]);
+                if (!company_set.has(company[0])) {
                     // write all the compnies to a csv file
-                    company_set.add(companyName);
+                    csvCompanyNames.push(company[0]);
+                    company_set.add(company[0]);
                     company_list.push({
-                        name: companyName,
-                        link: greenUrl + companyName
+                        name: company[0],
+                        link: leverUrl + company[0]
                     })
                 }
             }
         }
     });
 
-    writeToCsvCompanyNames(company_set, "greenhouse");
+    // writeToCsvCompanyNames(csvCompanyNames, "lever");
     return company_list;
 }
 
-export const getGreenHouseJobs = async () => {
-    console.log("inside get greenhouse jobs");
-    const GH_URL = "https://boards.greenhouse.io"
+export const getLeverJobs = async () => {
+    console.log("inside get lever jobs");
+    const LEVER_URL = "https://jobs.lever.co/";
     const company_list = await getAllCompanies();
     let job_links_seen = new Set();
     // create a list of greenhouse companies intialize to empty
-    let greenhouse_list = [];
+    let lever_list = [];
 
     for (let i = 0; i < company_list.length; i++) {
         let company = company_list[i];
@@ -59,27 +62,32 @@ export const getGreenHouseJobs = async () => {
             if (response.status == 200) {
 
                 const htmlDom = new jsdom.JSDOM(response.data);
-                htmlDom.window.document.querySelectorAll('section').forEach(async section => {
-                    section.querySelectorAll('div.opening').forEach(async opening => {
-                        let data = {}
-                        opening.querySelectorAll('a').forEach(async link => {
 
-                            data["company_name"] = company.name
-                            data["job_title"] = link.innerHTML
-                            data["job_link"] = GH_URL + link.getAttribute('href')
+                // Assuming 'htmlDom' is your document object
+                const postings = htmlDom.window.document.querySelectorAll('.posting');
 
+                postings.forEach(posting => {
+                    // Retrieve the href attribute of the posting-title
+                    const postingTitleHref = posting.querySelector('.posting-title').getAttribute('href');
 
-                        });
-                        opening.querySelectorAll('span.location').forEach(async location => {
-                            data["location"] = location.innerHTML
+                    // Retrieve the text content of the posting-name h5 element
+                    const postingNameText = posting.querySelector('.posting-title h5').textContent;
 
-                        })
-                        if (!job_links_seen.has(data["job_link"])) {
-                            job_links_seen.add(data["job_link"]);
-                            greenhouse_list.push(data);
-                        }
-                    })
+                    // Retrieve the text content of the sort-by-location span element
+                    const locationText = posting.querySelector('.sort-by-location').textContent;
+
+                    let data = {
+                        "company_name": company.name,
+                        "job_title": postingNameText,
+                        "job_link": postingTitleHref,
+                        "location": locationText,
+                    }
+                    lever_list.push(data);
+                    // console.log(`Posting Title Href: ${postingTitleHref}`);
+                    // console.log(`Posting Name Text: ${postingNameText}`);
+                    // console.log(`Location Text: ${locationText}`);
                 });
+
             }
             else {
                 console.log(company.name + " failed ")
@@ -89,18 +97,17 @@ export const getGreenHouseJobs = async () => {
             response = null;
         }
     }
-    return greenhouse_list;
+    return lever_list;
 
 }
 
-export const filterGreenHouseJobs = async () => {
-    console.log("inside filter greenhouse jobs");
-    const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = [];
+export const filterLeverJobs = async () => {
+    console.log("inside filter lever jobs");
+    const lever_list = await getLeverJobs();
+    const filtered_lever_list = [];
     let maxCount = 0;
 
-
-    const filter_greenhouse = greenhouse_list.map(async data => {
+    const filter_lever = lever_list.map(async data => {
 
         let location_to_check = data["location"];
         location_to_check = location_to_check.toLowerCase();
@@ -111,13 +118,13 @@ export const filterGreenHouseJobs = async () => {
             title_to_check = title_to_check.toLowerCase();
             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
 
-            let gh_job_link = data["job_link"];
+            let lever_job_link = data["job_link"];
 
             if (title_matched) {
-                let posting_date = await getJobPostingDates(gh_job_link);
+                let posting_date = await getJobPostingDates(lever_job_link);
                 data["posting_date"] = posting_date;
                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                    return data;
+                return data;
                 }
             }
         }
@@ -125,29 +132,26 @@ export const filterGreenHouseJobs = async () => {
     });
 
     // Wait for all promises to resolve
-    const results = await Promise.all(filter_greenhouse);
+    const results = await Promise.all(filter_lever);
 
     // Filter out null values and add valid items to the filtered list
     results.forEach(data => {
-        if (data !== null && maxCount < 50) {
-            filtered_greenhouse_list.push(data);
+        if (data !== null) {
+            filtered_lever_list.push(data);
             maxCount++;
         }
     });
 
-    return filtered_greenhouse_list;
+    return filtered_lever_list;
 }
 
-
-
-export const getFilteredGreenHouseJobs = async () => {
-    console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobs();
-    console.log("greenhouse_list");
-    writeToCsv(greenhouse_list, "greenhouse");
-    writeToExcel(greenhouse_list, "greenhouse");
+export const getFilteredLeverJobs = async () => {
+    console.log("inside get filtered Lever jobs");
+    const lever_list = await filterLeverJobs();
+    console.log("lever_list");
+    writeToCsv(lever_list, "Lever");
+    writeToExcel(lever_list, "Lever");
 }
-
 
 export const getJobPostingDates = async (job_link) => {
     let response = null;

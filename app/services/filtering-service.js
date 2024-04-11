@@ -74,13 +74,13 @@ class FilterJobs {
         this.titleChecker = new TitleChecker();
     }
 
-    getCombinations(part, r) {
+    async getCombinations(part, r) {
         let result = [];
         this.generateCombinations(part, r, 0, [], result);
         return result;
     }
 
-    generateCombinations(part, r, index, current, result) {
+    async generateCombinations(part, r, index, current, result) {
         if (current.length === r) {
             result.push(current);
             return;
@@ -90,14 +90,14 @@ class FilterJobs {
         this.generateCombinations(part, r, index + 1, current, result);
     }
 
-    matchJobsToChecker(word, checkTitle = false, checkLocation = false) {
+    async matchJobsToChecker(word, checkTitle = false, checkLocation = false) {
         const wordParts = word.split(' ').map(part => part.trim());
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
 
         for (let r = 0; r <= validParts.length; r++) {
-            for (let combo of this.getCombinations(validParts, r)) {
+            for (let combo of await this.getCombinations(validParts, r)) {
                 let searchWord = combo.join(' ');
                 // let searchWordLen = searchWord.length;
                 if (checkTitle) {
@@ -124,7 +124,7 @@ class FilterJobs {
         return false;
     }
 
-    postingDateChecker(postingDate) {
+    async postingDateChecker(postingDate) {
         let currDate = new Date();
         // format the current date to the same format as the posting date(YYYY-MM-DD)
         let formatted_date = new Date(postingDate);
