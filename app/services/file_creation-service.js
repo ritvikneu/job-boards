@@ -57,3 +57,15 @@ export const writeToCsv = function writeCsvFile(data, listing) {
 }
 
 
+export const writeToCsvCompanyNames = function writeCsvFile(data, listing) {
+    // loop through the data and write to the csv file
+    data.forEach(data => {
+        csvData.push(data);
+    });
+    csv_file_name = listing + '-' + csv_file_name;
+    const csvFilePath = path.join(process.cwd(), 'app', 'data', csv_file_name);
+    const csvDataString = csvData.map(row => row.join(',')).join('\n');
+    writeFileSync(csvFilePath, csvDataString);
+    console.log('csv file saved');
+}
+
