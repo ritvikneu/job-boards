@@ -46,7 +46,7 @@ export const writeToExcel = function writeExcelFile(data, listing) {
 
 export const writeToCsv = function writeCsvFile(data, listing) {
     // loop through the data and write to the csv file
-    data.forEach(data => {
+    data.forEach(async data => {
         csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"], data["posting_date"]]);
     });
     csv_file_name = listing + '-' + csv_file_name;

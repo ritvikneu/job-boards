@@ -84,6 +84,31 @@ export const getGreenHouseJobs = async () => {
                         })
                         greenhouse_list.push(data);
                         maxCount++;
+
+                        // let title_to_check = data["job_title"];
+                        // title_to_check = title_to_check.toLowerCase();
+                        // const title_matched = filterJob.matchJobsToChecker(title_to_check, true, false);
+
+                        // let location_to_check = data["location"];
+                        // location_to_check = location_to_check.toLowerCase();
+                        // const location_matched = filterJob.matchJobsToChecker(location_to_check, false, true);
+
+                        // let gh_job_link = data["job_link"];
+
+                        // if (title_matched && location_matched) {
+                        //     // csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"]]);
+                        //     //wait for the job posting date
+                        //     let posting_date = await getJobPostingDates(gh_job_link);
+                        //     data["posting_date"] = posting_date;
+                        //     // if the posting date is not null and less than 30 days from current then push the data to the greenhouse list
+                        //     if (posting_date && filterJob.postingDateChecker(posting_date)) {
+                        //         // if the job link is not already in the greenhouse list then add it
+                        //         if (!greenhouse_list.includes(data)) {
+                        //             greenhouse_list.push(data);
+                        //             maxCount++;
+                        //         }
+                        //     }
+                        // }
                     })
                 });
             }
@@ -103,51 +128,42 @@ export const getGreenHouseJobs = async () => {
 export const filterGreenHouseJobs = async () => {
     console.log("inside filter greenhouse jobs");
     const greenhouse_list = await getGreenHouseJobs();
+    // console.log(greenhouse_list);
     const filtered_greenhouse_list = [];
-
-    // Use map to create an array of promises
-    const filter_greenhouse = greenhouse_list.map(async data => {
+    greenhouse_list.forEach(async data => {
         let title_to_check = data["job_title"];
         title_to_check = title_to_check.toLowerCase();
-        const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+        const title_matched = filterJob.matchJobsToChecker(title_to_check, true, false);
 
         let location_to_check = data["location"];
         location_to_check = location_to_check.toLowerCase();
-        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+        const location_matched = filterJob.matchJobsToChecker(location_to_check, false, true);
 
         let gh_job_link = data["job_link"];
 
         if (title_matched && location_matched) {
+            // csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"]]);
+            //wait for the job posting date
             let posting_date = await getJobPostingDates(gh_job_link);
             data["posting_date"] = posting_date;
-            if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                return data; // Return the data if it meets the criteria
+            // if the posting date is not null and less than 30 days from current then push the data to the greenhouse list
+            if (posting_date && filterJob.postingDateChecker(posting_date)) {
+                // if the job link is not already in the greenhouse list then add it
+                if (!filtered_greenhouse_list.includes(data)) {
+                    filtered_greenhouse_list.push(data);
+                }
             }
-        }
-        return null; // Return null for items that don't meet the criteria
-    });
-
-    // Wait for all promises to resolve
-    const results = await Promise.all(filter_greenhouse);
-
-    // Filter out null values and add valid items to the filtered list
-    results.forEach(data => {
-        if (data !== null) {
-            filtered_greenhouse_list.push(data);
         }
     });
 
     return filtered_greenhouse_list;
 }
 
-
-
 export const getFilteredGreenHouseJobs = async () => {
     console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobs();
-    console.log("greenhouse_list");
+    const greenhouse_list = await getGreenHouseJobs();
     writeToCsv(greenhouse_list, "greenhouse");
-    writeToExcel(greenhouse_list, "greenhouse");
+    // writeToExcel(greenhouse_list, "greenhouse");
 }
 
 
@@ -175,6 +191,7 @@ export const getJobPostingDates = async (job_link) => {
     }
     catch (err) {
         response = null;
+        // console.log(err.message)
     }
 }
 
