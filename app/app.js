@@ -11,7 +11,8 @@ app.use(express.json());
 route(app);
 // console.log(ghService.companies_list())
 // debugger;
-ghService.getJobs();
+// ghServicePromise.getFilteredGreenHouseJobs();
+ghService.getFilteredGreenHouseJobs();
 // locationService.country_match();
 // locationService.getCombo("Senior Engineer");
 // locationService.country_match_loc();

@@ -3,15 +3,17 @@ import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 
-import { writeToCsv, writeToExcel } from './file_creation-service.js';
+import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 
 
-export const companies_list = function getCompanies() {
+
+export const getAllCompanies = async() => {
+    console.log("inside get all companies");
 
     const greenUrl = "https://boards.greenhouse.io/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/greenhouse_companies.csv';
+    const csvFile = 'app/data/greenhouse_companies_test.csv';
     let company_list = [];
     const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
@@ -37,12 +39,14 @@ export const companies_list = function getCompanies() {
         }
     });
 
+
     return company_list;
 }
 
-export const getJobs = async () => {
+export const getGreenHouseJobs = async () => {
+    console.log("inside get greenhouse jobs");
     const GH_URL = "https://boards.greenhouse.io"
-    const company_list = companies_list();
+    const company_list = await getAllCompanies();
     // create a list of greenhouse companies intialize to empty
     let greenhouse_list = [];
     let maxCount = 0;
@@ -64,17 +68,17 @@ export const getJobs = async () => {
             if (response.status == 200) {
 
                 const htmlDom = new jsdom.JSDOM(response.data);
-                htmlDom.window.document.querySelectorAll('section').forEach(section => {
+                htmlDom.window.document.querySelectorAll('section').forEach(async section => {
                     section.querySelectorAll('div.opening').forEach(async opening => {
                         let data = {}
-                        opening.querySelectorAll('a').forEach(link => {
+                        opening.querySelectorAll('a').forEach(async link => {
 
                             data["company_name"] = company.name
                             data["job_title"] = link.innerHTML
                             data["job_link"] = GH_URL + link.getAttribute('href')
 
                         });
-                        opening.querySelectorAll('span.location').forEach(location => {
+                        opening.querySelectorAll('span.location').forEach(async location => {
                             data["location"] = location.innerHTML
 
                         })
@@ -95,11 +99,12 @@ export const getJobs = async () => {
                             data["posting_date"] = posting_date;
                             // if the posting date is not null and less than 30 days from current then push the data to the greenhouse list
                             if (posting_date && filterJob.postingDateChecker(posting_date)) {
-                                greenhouse_list.push(data);
-                                maxCount++;
+                                // if the job link is not already in the greenhouse list then add it
+                                if (!greenhouse_list.includes(data)) {
+                                    greenhouse_list.push(data);
+                                    maxCount++;
+                                }
                             }
-                            // greenhouse_list.push(data);
-                            // maxCount++;
                         }
                     })
                 });
@@ -107,27 +112,25 @@ export const getJobs = async () => {
             else {
                 console.log(company.name + " failed ")
             }
-
         }
         catch (err) {
             response = null;
-
-            // console.log(err.message)
         }
     }
-
-
-
-    writeToCsv(greenhouse_list,"greenhouse");
-    writeToExcel(greenhouse_list,"greenhouse");
 
     return greenhouse_list;
 
 }
 
+export const getFilteredGreenHouseJobs = async () => {
+    console.log("inside get filtered greenhouse jobs");
+    const greenhouse_list = await getGreenHouseJobs();
+        writeToCsv(greenhouse_list, "greenhouse");
+        writeToExcel(greenhouse_list, "greenhouse");
+}
+
+
 export const getJobPostingDates = async (job_link) => {
-
-
     let response = null;
     try {
         response = await axios.get(job_link);
