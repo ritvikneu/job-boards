@@ -19,7 +19,8 @@ const worksheet = workbook.addWorksheet('Sheet1');
 worksheet.columns = [
     { header: 'Company Name', key: 'company_name', width: 20 },
     { header: 'Job Title', key: 'job_title', width: 50 },
-    { header: 'Link', key: 'job_link', width: 70 },
+    {header: 'Link', key: 'job_link', width: 70, style: {font: {color: {argb: 'FF0000FF'}},}, },
+    // { header: 'Link', key: 'job_link', width: 70 },
     { header: 'Location', key: 'location', width: 50 },
     { header: 'Posting Date', key: 'posting_date', width: 50 },
 ];
@@ -32,6 +33,12 @@ csvData.push(header);
 export const writeToExcel = function writeExcelFile(data, listing) {
     // loop through the data and write to the excel file
     data.forEach(data => {
+        // make data a hyperlink and add color to it
+        data["job_link"] = {
+            text: data["job_link"],
+            hyperlink: data["job_link"]
+            
+        };
         worksheet.addRow(data);
     });
     excel_file_name = listing + '-' + excel_file_name;

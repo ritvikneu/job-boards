@@ -46,7 +46,6 @@ class LocationChecker {
         this.statesAbbrMap = new Map();
         statesAbbr.forEach(location => this.statesAbbrMap.set(location, this.statesAbbrMap.has(location) ? this.statesAbbrMap.get(location) + 1 : 1));
 
-
     }
 
     isCountryPresent(location) {
@@ -90,8 +89,15 @@ class FilterJobs {
         this.generateCombinations(part, r, index + 1, current, result);
     }
 
-    async matchJobsToChecker(word, checkTitle = false, checkLocation = false) {
-        const wordParts = word.split(' ').map(part => part.trim());
+    async matchJobsToChecker(word, checkTitle = false, checkLocation = false,portal) {
+        let wordParts = [];
+
+        if (portal === 'workday') {
+            wordParts = word.split('-').map(part => part.trim().toLowerCase());
+        }else{
+            wordParts = word.split(' ').map(part => part.trim().toLowerCase());
+        }
+        
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
@@ -130,7 +136,7 @@ class FilterJobs {
         let formatted_date = new Date(postingDate);
         const diffTime = Math.abs(currDate - formatted_date);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays <= 30) {
+        if (diffDays <= 20) {
             return true;
         }
         return false;
