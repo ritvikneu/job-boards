@@ -11,7 +11,7 @@ export const getAllCompanies = async () => {
     const greenUrl = "https://boards.greenhouse.io/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/greenhouse_companies.csv';
+    const csvFile = 'app/data/greenhouse_companies_test.csv';
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
@@ -34,7 +34,8 @@ export const getAllCompanies = async () => {
         }
     });
 
-    writeToCsvCompanyNames(company_set, "greenhouse");
+    // writeToCsvCompanyNames(company_set, "greenhouse");
+    // process.exit();
     return company_list;
 }
 
@@ -129,7 +130,7 @@ export const filterGreenHouseJobs = async () => {
 
     // Filter out null values and add valid items to the filtered list
     results.forEach(data => {
-        if (data !== null && maxCount < 50) {
+        if (data !== null) {
             filtered_greenhouse_list.push(data);
             maxCount++;
         }
