@@ -53,14 +53,19 @@ export const writeToExcel = function writeExcelFile(data, listing) {
 
 export const writeToCsv = function writeCsvFile(data, listing) {
     // loop through the data and write to the csv file
-    data.forEach(async data => {
-        csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"], data["posting_date"]]);
-    });
-    csv_file_name = listing + '-' + csv_file_name;
-    const csvFilePath = path.join(process.cwd(), 'app', 'data', csv_file_name);
-    const csvDataString = csvData.map(row => row.join(',')).join('\n');
-    writeFileSync(csvFilePath, csvDataString);
-    console.log('csv file saved');
+    try {
+        data.forEach(async data => {
+            csvData.push([data["company_name"], data["job_title"], data["job_link"], data["location"], data["posting_date"]]);
+        });
+        csv_file_name = listing + '-' + csv_file_name;
+        const csvFilePath = path.join(process.cwd(), 'app', 'data', csv_file_name);
+        const csvDataString = csvData.map(row => row.join(',')).join('\n');
+        writeFileSync(csvFilePath, csvDataString);
+        console.log('csv file saved');
+    }
+    catch (error) {
+        console.log("Error in writing to csv file");
+    }
 }
 
 

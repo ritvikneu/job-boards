@@ -27,23 +27,26 @@ export const workdayJobFetch = async (url) => {
             'Content-Type': 'application/json'
         },
     });
-    const data =  response.json();
-    return data.jobPostingInfo;
+    // resoolve the promise and return the data
+    const data = await response.json();
+    console.log('Data:', data.jobPostingInfo);
+    // return data.jobPostingInfo;
 }
 
 let URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs';
  URL = 'https://analogdevices.wd1.myworkdayjobs.com/en-US/External/jobs';
  URL = 'https://analogdevices.wd1.myworkdayjobs.com/wday/cxs/analogdevices/External/jobs'
+ URL = 'https://centrify.wd1.myworkdayjobs.com/wday/cxs/centrify/External/jobs'
 let offset = 0;
 let jobPostings = [];
 export const workdayCall = async (url=URL) => {
     while (true) {
         let response = await workdayFetch(url, offset);
         console.log('Response:', response);
-        if (offset > 20) {
-            console.log('Offset minit reached:', offset);
-            break;
-        }
+        // if (offset > 20) {
+        //     console.log('Offset minit reached:', offset);
+        //     break;
+        // }
         
         let postedOn = response[0].postedOn;
         // split the string at space and get the first element
@@ -84,8 +87,8 @@ export const workdayCall = async (url=URL) => {
 
     // console.log('Data:', data);
 
-    // writeToCsv(allJobData, 'workday');
-    // writeToExcel(allJobData, 'workday');
+    writeToCsv(allJobData, 'workday');
+    writeToExcel(allJobData, 'workday');
     return allJobData
 }
 
