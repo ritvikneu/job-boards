@@ -54,6 +54,14 @@ class LocationChecker {
         }
     }
 
+    async isCountryPresentWorkday(location) {
+        if (this.countriesMap.has(location)) {
+            return true;
+        }
+    }
+
+    
+
     isStatePresent(location) {
         if (this.statesMap.has(location)) {
             return true;
@@ -136,7 +144,7 @@ class FilterJobs {
         let formatted_date = new Date(postingDate);
         const diffTime = Math.abs(currDate - formatted_date);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays <= 20) {
+        if (diffDays <= 10) {
             return true;
         }
         return false;

@@ -11,7 +11,7 @@ export const getAllCompanies = async () => {
     const greenUrl = "https://boards.greenhouse.io/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/greenhouse_companies_test.csv';
+    const csvFile = 'app/data/companies/greenhouse_companies.csv';
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
