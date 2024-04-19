@@ -49,7 +49,7 @@ export const workdayJobFetch = async (url) => {
 export const getAllCompanies = async () => {
     console.log("inside get all workday companies");
     const company_set = new Set();
-    const csvFile = 'app/data/companies/workday.csv';
+    const csvFile = 'app/data/companies/workday_test.csv';
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
@@ -138,13 +138,13 @@ export const filterWorkDayJobs = async () => {
         if (location_matched) {
             let posting_date = job["posting_date"];
             if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                // let title_to_check = job["job_title"].toLowerCase();
-                // const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
-                // console.log("title_matched", title_matched);
-                // if (title_matched) {
-                //     return job; // Keep the job if it matches all criteria
-                // }
-                return job;
+                let title_to_check = job["job_title"].toLowerCase();
+                // console.log("title_to_check", title_to_check);
+                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
+                if (title_matched) {
+                    return job; // Keep the job if it matches all criteria
+                }
+                // return job;
             }
         }
         

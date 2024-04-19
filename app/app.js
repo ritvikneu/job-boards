@@ -14,14 +14,17 @@ route(app);
 let URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/job/Remote-Colorado/Restaurant-Solutions-Business-Consultant_R-10322313'
 URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
 // ghService.getFilteredGreenHouseJobs();
+
+workdayService.filterWorkDayJobs();
+// leverService.getFilteredLeverJobs();
+
+
 // workdayService.getWorkdayJobs();
 // workdayService.getAllCompanies();
 // workdayService.workdayFetch(URL, 20, 'Fiserv');
 // workdayService.workdayCall();
-workdayService.filterWorkDayJobs();
-// workdayService.workdayJobFetch(URL);
 // workdayService.filterWorkDayJobs();
-// leverService.getFilteredLeverJobs();
+// workdayService.workdayJobFetch(URL);
 
 
 export {
