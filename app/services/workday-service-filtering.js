@@ -4,6 +4,9 @@ import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creatio
 import axios from 'axios';
 import { filterJob, locationChecker } from './filtering-service.js';
 
+
+ 
+
 export const workdayFetch = async (url, offset, companyName) => {
     const response = await fetch(url, {
         method: 'POST',
@@ -12,6 +15,7 @@ export const workdayFetch = async (url, offset, companyName) => {
         },
         body: JSON.stringify({
             appliedFacets: {},
+            // appliedFacets:{"locationCountry":["bc33aa3152ec42d4995f4791a106ed09"]}, //FILTER BY COUNTRY CODE USA
             limit: 20,
             offset: offset,
             searchText: ''
@@ -42,14 +46,15 @@ export const workdayJobFetch = async (url) => {
         const jobData = await response.json();
         return jobData.jobPostingInfo;
     } catch (error) {
-        throw error; // Throw the error so it can be caught in the calling function
+        console.log('Error fetching job data:', url);
+        // throw error; // Throw the error so it can be caught in the calling function
     }
 }
 
 export const getAllCompanies = async () => {
     console.log("inside get all workday companies");
     const company_set = new Set();
-    const csvFile = 'app/data/companies/workday_test.csv';
+    const csvFile = 'app/companies/workday_test.csv';
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
@@ -87,7 +92,7 @@ export const getWorkdayJobs = async (company_list) => {
         let companyName = company_list[i].name;
         let URL = company_list[i].link;
         let offset = 0;
-        while (offset < 100) {
+        while (offset < 260) {
             let response = await workdayFetch(URL, offset, companyName);
             try {
                 jobPostings.push(...response);
@@ -103,15 +108,19 @@ export const getWorkdayJobs = async (company_list) => {
         let data = {}
         let URL = job.baseURL;
         let job_URL = URL.slice(0, -5) + job.externalPath;
-        let jobData = await workdayJobFetch(job_URL);
+        try {
+            let jobData = await workdayJobFetch(job_URL);
+            data["company_name"] = job.companyName;
+            data["job_title"] = jobData.title;
+            data["job_link"] = jobData.externalUrl;
+            data["location"] = jobData.country.descriptor;
+            data["posting_date"] = jobData.startDate;
+            allJobData.push(data);
+        }
+        catch (error) {
+            console.log("Error in fetching job data", job_URL);
+        }
 
-        data["company_name"] = job.companyName;
-        data["job_title"] = jobData.title;
-        data["job_link"] = jobData.externalUrl;
-        data["location"] = jobData.country.descriptor;
-        data["posting_date"] = jobData.startDate;
-
-        allJobData.push(data);
     }
     );
     const jobDataInfo = await Promise.all(jobsInfo);
@@ -122,6 +131,9 @@ export const workdayJobsNoFilter = async () => {
     console.log("inside workday call");
     const company_list = await getAllCompanies();
     const workdayListInfo = await getWorkdayJobs(company_list);
+
+    // writeToCsv(workdayListInfo, "workday");
+    // writeToExcel(workdayListInfo, "workday");
     return workdayListInfo;
 }
 
@@ -134,20 +146,21 @@ export const filterWorkDayJobs = async () => {
         // console.log("inside jobPosting");
         let country_check = job["location"].toLowerCase();
         const location_matched = await locationChecker.isCountryPresentWorkday(country_check);
-        
+
         if (location_matched) {
             let posting_date = job["posting_date"];
             if (posting_date && await filterJob.postingDateChecker(posting_date)) {
                 let title_to_check = job["job_title"].toLowerCase();
                 // console.log("title_to_check", title_to_check);
                 const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
+                // console.log("title_matched", title_matched);
                 if (title_matched) {
                     return job; // Keep the job if it matches all criteria
                 }
                 // return job;
             }
         }
-        
+
         return null; // Discard the job if it doesn't meet the criteria
     });
 

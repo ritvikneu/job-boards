@@ -4,3 +4,4 @@ node_modules
 copies
 data
 structures
+.DS_Store

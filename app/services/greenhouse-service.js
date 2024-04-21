@@ -11,7 +11,7 @@ export const getAllCompanies = async () => {
     const greenUrl = "https://boards.greenhouse.io/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/companies/greenhouse_companies.csv';
+    const csvFile = 'app/companies/greenhouse_companies_test.csv';
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
@@ -34,7 +34,7 @@ export const getAllCompanies = async () => {
         }
     });
 
-    // writeToCsvCompanyNames(company_set, "greenhouse");
+    // writeToCsvCompanyNames(company_set, "g-company-names");
     // process.exit();
     return company_list;
 }
@@ -51,6 +51,7 @@ export const getGreenHouseJobs = async () => {
         let company = company_list[i];
         let response = null;
         try {
+            // console.log(" LINK  ", company.link)
             response = await axios.get(company.link);
             const headers = response.headers;
 
@@ -83,10 +84,11 @@ export const getGreenHouseJobs = async () => {
                 });
             }
             else {
-                console.log(company.name + " failed ")
+                console.log("---------------- Error in fetching greenhouse jobs",company.name);
             }
         }
         catch (err) {
+            console.log("---------------- Error in fetching greenhouse jobs",company.name);
             response = null;
         }
     }

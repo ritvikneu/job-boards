@@ -11,7 +11,7 @@ export const getAllCompanies = async () => {
     const leverUrl = "https://jobs.lever.co/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/companies/lever_companies.csv';
+    const csvFile = 'app/companies/lever_companies.csv';
     let company_list = [];
     const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');

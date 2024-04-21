@@ -13,9 +13,31 @@ app.use(express.json());
 route(app);
 let URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/job/Remote-Colorado/Restaurant-Solutions-Business-Consultant_R-10322313'
 URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
+
+// RUN ONLY ONE OF THE SERVICE AT A TIME - GREENHOUSE or LEVER or WORKDAY
+// // GreenHouse Jobs
+// // to run the greenhouse jobs with filter
 // ghService.getFilteredGreenHouseJobs();
 
+// // Lever Jobs
+// // to run the lever jobs with filter
+// leverService.getFilteredLeverJobs();
+
+// // Workday Jobs
+// // to run the workday jobs with filter
+// // set offset in workdayFetch and appliedFacets in workdayJobFetch
 workdayService.filterWorkDayJobs();
+
+// to run the workday jobs without filter
+// workdayService.workdayJobsNoFilter();
+
+
+
+// ghService.getFilteredGreenHouseJobs();
+// ghService.getAllCompanies();
+// ghService.getGreenHouseJobs();
+
+// workdayService.workdayJobsNoFilter();
 // leverService.getFilteredLeverJobs();
 
 
