@@ -11,7 +11,7 @@ export const getAllCompanies = async () => {
     const leverUrl = "https://jobs.lever.co/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/data/lever_companies.csv';
+    const csvFile = 'app/companies/lever_companies.csv';
     let company_list = [];
     const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
@@ -149,7 +149,7 @@ export const getFilteredLeverJobs = async () => {
     console.log("inside get filtered Lever jobs");
     const lever_list = await filterLeverJobs();
     console.log("lever_list");
-    writeToCsv(lever_list, "Lever");
+    // writeToCsv(lever_list, "Lever");
     writeToExcel(lever_list, "Lever");
 }
 

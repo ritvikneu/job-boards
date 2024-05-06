@@ -60,7 +60,7 @@ class LocationChecker {
         }
     }
 
-    
+
 
     isStatePresent(location) {
         if (this.statesMap.has(location)) {
@@ -97,15 +97,12 @@ class FilterJobs {
         this.generateCombinations(part, r, index + 1, current, result);
     }
 
-    async matchJobsToChecker(word, checkTitle = false, checkLocation = false,portal) {
+    async matchJobsToChecker(word, checkTitle = false, checkLocation = false, portal) {
         let wordParts = [];
 
-        if (portal === 'workday') {
-            wordParts = word.split('-').map(part => part.trim().toLowerCase());
-        }else{
-            wordParts = word.split(' ').map(part => part.trim().toLowerCase());
-        }
-        
+        wordParts = word.split(' ').map(part => part.trim().toLowerCase());
+
+
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
