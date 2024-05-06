@@ -7,7 +7,8 @@ const file_name = 'jobs';
 const curr_date = new Date()
 const formatted_date = curr_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const formatted_time = curr_date.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric' });
-let excel_file_name = file_name + '_' + formatted_date + '-' + formatted_time + '.xlsx';
+// let excel_file_name = file_name + '_' + formatted_date + '-' + formatted_time + '.xlsx';
+let excel_file_name = file_name + '_' + formatted_date + '.xlsx';
 let csv_file_name = file_name + '_' + formatted_date + '-' + formatted_time + '.csv';
 
 
