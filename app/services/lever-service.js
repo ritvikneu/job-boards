@@ -4,14 +4,18 @@ import axios from 'axios';
 import jsdom from 'jsdom';
 
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
+import { config } from 'dotenv';
+config();
 
+
+const fileName = process.env.FILE_NAME
 export const getAllCompanies = async () => {
     console.log("inside get all companies for lever");
 
     const leverUrl = "https://jobs.lever.co/";
     // const greenApis = new Set();
     const company_set = new Set();
-    const csvFile = 'app/companies/lever_companies.csv';
+    const csvFile = `app/companies/lever/${fileName}.csv`;
     let company_list = [];
     const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
@@ -22,8 +26,6 @@ export const getAllCompanies = async () => {
         if (splitRow.length > 0) {
             const company = splitRow[0].split('/');
             if (company.length > 0) {
-                // console.log(company[0]);
-                // greenApis.add(greenUrl + company[0]);
                 if (!company_set.has(company[0])) {
                     // write all the compnies to a csv file
                     csvCompanyNames.push(company[0]);

@@ -14,7 +14,7 @@ export const getAllCompanies = async () => {
     console.log("inside get all companies");
 
     const greenUrl = "https://boards.greenhouse.io/";
-    console.log("000000000000-0-----00--0980980809080",fileName)
+    // console.log("000000000000-0-----00--0980980809080",fileName)
     // const greenApis = new Set();
     const company_set = new Set();
     const csvFile = `app/companies/greenhouse/${fileName}.csv`;
@@ -143,6 +143,7 @@ export const filterGreenHouseJobs = async () => {
     });
 
     // Wait for all promises to resolve
+    // process the promises in sequence
     const results = await Promise.all(filter_greenhouse);
     filter_greenhouse.length = 0; // Release memory by emptying the array
 
@@ -161,7 +162,7 @@ export const filterGreenHouseJobs = async () => {
 
 export const getFilteredGreenHouseJobs = async () => {
     console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobsBatch();
+    const greenhouse_list = await filterGreenHouseJobsSeq();
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, "greenhouse");
     writeToExcel(greenhouse_list, fileName);
@@ -240,3 +241,36 @@ export const filterGreenHouseJobsBatch = async () => {
     return filtered_greenhouse_list;
 }
 
+export const filterGreenHouseJobsSeq = async () => {
+    const greenhouse_list = await getGreenHouseJobs();
+    const filtered_greenhouse_list = [];
+    let maxCount = 0;
+    console.log("inside filter greenhouse jobs");
+
+    // Loop through each data item sequentially
+    for (let data of greenhouse_list) {
+        let location_to_check = data["location"].toLowerCase();
+        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+
+        if (location_matched) {
+            let title_to_check = data["job_title"].toLowerCase();
+            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+
+            let gh_job_link = data["job_link"];
+
+            if (title_matched) {
+                let posting_date = await getJobPostingDates(gh_job_link);
+                data["posting_date"] = posting_date;
+                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                    filtered_greenhouse_list.push(data);
+                    maxCount++;
+                }
+            }
+        }
+
+        // Release memory associated with the resolved promise
+        data = null;
+    }
+
+    return filtered_greenhouse_list;
+}
