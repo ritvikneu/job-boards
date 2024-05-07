@@ -89,7 +89,7 @@ class FilterJobs {
 
     async generateCombinations(part, r, index, current, result) {
         if (current.length === r) {
-            result.push(current);
+            result.push([...current]);
             return;
         }
         if (index === part.length) return;
@@ -141,7 +141,7 @@ class FilterJobs {
         let formatted_date = new Date(postingDate);
         const diffTime = Math.abs(currDate - formatted_date);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays <= 10) {
+        if (diffDays <= process.env.POSTING_DIFF) {
             return true;
         }
         return false;

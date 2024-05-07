@@ -3,8 +3,11 @@ import { readFileSync } from 'fs';
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 import axios from 'axios';
 import { filterJob, locationChecker } from './filtering-service.js';
+import { config } from 'dotenv';
+config();
 
 
+const fileName = process.env.FILE_NAME
  
 
 export const workdayFetch = async (url, offset, companyName) => {
@@ -14,8 +17,9 @@ export const workdayFetch = async (url, offset, companyName) => {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            appliedFacets: {},
+            // appliedFacets: {},
             // appliedFacets:{"locationCountry":["bc33aa3152ec42d4995f4791a106ed09"]}, //FILTER BY COUNTRY CODE USA
+            // appliedFacets:{"jobFamilyGroup":["e65dbadf6a50100168ed7f2a693c0001","e65dbadf6a50100168ed86fe4cf50001"],"timeType":["1aea6da227e21005504339b6b1770001"]},
             limit: 20,
             offset: offset,
             searchText: ''
@@ -54,7 +58,7 @@ export const workdayJobFetch = async (url) => {
 export const getAllCompanies = async () => {
     console.log("inside get all workday companies");
     const company_set = new Set();
-    const csvFile = 'app/companies/workday_test.csv';
+    const csvFile = `app/companies/workday/${fileName}.csv`;
     let company_list = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
@@ -92,7 +96,7 @@ export const getWorkdayJobs = async (company_list) => {
         let companyName = company_list[i].name;
         let URL = company_list[i].link;
         let offset = 0;
-        while (offset < 260) {
+        while (offset < process.env.WORKDAY_OFFSET) {
             let response = await workdayFetch(URL, offset, companyName);
             try {
                 jobPostings.push(...response);
