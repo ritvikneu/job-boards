@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from 'cors';
 import route from "./routes/index.js";
 import * as ghService from "./services/greenhouse-service.js";
+import * as ghEmbedService from "./services/greenEmbed-service.js";
 import * as leverService from "./services/lever-service.js";
 // import * as workdayService from "./services/workday-service-all.js";
 import * as workdayService from "./services/workday-service.js";
@@ -19,9 +20,13 @@ URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
 // // to run the greenhouse jobs with filter
 // ghService.getFilteredGreenHouseJobs();
 
+// GreenHouse Jobs with Embed
+ghEmbedService.getFilteredGreenHouseJobs();
+
+
 // // Lever Jobs
 // // to run the lever jobs with filter
-leverService.getFilteredLeverJobs();
+// leverService.getFilteredLeverJobs();
 
 // // Workday Jobs
 // // to run the workday jobs with filter

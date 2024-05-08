@@ -152,7 +152,7 @@ export const getFilteredLeverJobs = async () => {
     const lever_list = await filterLeverJobs();
     console.log("lever_list");
     // writeToCsv(lever_list, "Lever");
-    writeToExcel(lever_list, "Lever");
+    writeToExcel(lever_list, fileName);
 }
 
 export const getJobPostingDates = async (job_link) => {

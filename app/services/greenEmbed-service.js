@@ -13,7 +13,6 @@ const fileName = process.env.FILE_NAME
 export const getAllCompanies = async () => {
     console.log("inside get all companies");
 
-    const greenUrl = "https://boards.greenhouse.io/";
     const greenEmbedUrl = "https://boards.greenhouse.io/embed/job_board?for=";
     // console.log("000000000000-0-----00--0980980809080",fileName)
     // const greenApis = new Set();
@@ -36,7 +35,7 @@ export const getAllCompanies = async () => {
                     company_set.add(companyName);
                     company_list.push({
                         name: companyName,
-                        link: greenUrl + companyName
+                        link: greenEmbedUrl + companyName
                     })
                 }
             }
@@ -80,14 +79,8 @@ export const getGreenHouseJobs = async () => {
 
                             data["company_name"] = company.name
                             data["job_title"] = link.innerHTML
-                            data["job_link"] = GH_URL + link.getAttribute('href')
-                            // https://wing.com/careers/7432119002?gh_jid=7432119002
-                            // get the job_id from the link gh_jid
-
-                            // let job_id = link.getAttribute('href').split('?gh_jid=')[1];
-                            // data["job_link"] = GH_URL + "/"+ data["company_name"]+ "/jobs/" + job_id
-
-
+                            let job_id = link.getAttribute('href').split('?gh_jid=')[1];
+                            data["job_link"] = GH_URL + "/"+ data["company_name"]+ "/jobs/" + job_id
 
                         });
                         opening.querySelectorAll('span.location').forEach(async location => {
@@ -123,7 +116,7 @@ export const getGreenHouseJobs = async () => {
 export const filterGreenHouseJobs = async () => {
     console.log("inside filter greenhouse jobs");
     const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = {};
+    const filtered_greenhouse_list = [];
     let maxCount = 0;
 
     const filter_greenhouse = greenhouse_list.map(async data => {
@@ -141,8 +134,13 @@ export const filterGreenHouseJobs = async () => {
 
             if (title_matched) {
                 let posting_date = await getJobPostingDates(gh_job_link);
+            
                 data["posting_date"] = posting_date;
                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                    return data;
+                }
+                // if posting date is not available, then return the data
+                else if (!posting_date){
                     return data;
                 }
             }
@@ -170,7 +168,7 @@ export const filterGreenHouseJobs = async () => {
 
 export const getFilteredGreenHouseJobs = async () => {
     console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobsSeq();
+    const greenhouse_list = await filterGreenHouseJobs();
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, "greenhouse");
     writeToExcel(greenhouse_list, fileName);

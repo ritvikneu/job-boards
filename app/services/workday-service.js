@@ -17,12 +17,15 @@ export const workdayFetch = async (url, offset, companyName) => {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            // appliedFacets: {},
+            appliedFacets: {},
             // appliedFacets:{"locationCountry":["bc33aa3152ec42d4995f4791a106ed09"]}, //FILTER BY COUNTRY CODE USA
             // appliedFacets:{"jobFamilyGroup":["e65dbadf6a50100168ed7f2a693c0001","e65dbadf6a50100168ed86fe4cf50001"],"timeType":["1aea6da227e21005504339b6b1770001"]},
+            //walmart
+            // appliedFacets:{"locationCountry":["bc33aa3152ec42d4995f4791a106ed09"],"jobFamilyGroup":["e83ebdbd2a0a01ea72c2808948e924c6","e83ebdbd2a0a01e7e1477a8948e904c6"]},
             limit: 20,
             offset: offset,
             searchText: ''
+            
         })
     });
     try {
@@ -35,7 +38,7 @@ export const workdayFetch = async (url, offset, companyName) => {
         }
         return data.jobPostings;
     } catch (error) {
-        console.error('Error fetching job data:', error);
+        console.error('Error fetching jobs:', error);
     }
 }
 
@@ -50,7 +53,7 @@ export const workdayJobFetch = async (url) => {
         const jobData = await response.json();
         return jobData.jobPostingInfo;
     } catch (error) {
-        console.log('Error fetching job data:', url);
+        console.log('Error fetching single job:', url);
         // throw error; // Throw the error so it can be caught in the calling function
     }
 }
@@ -108,6 +111,8 @@ export const getWorkdayJobs = async (company_list) => {
         }
     }
     let allJobData = [];
+    const job_links_seen = new Set();
+
     const jobsInfo = jobPostings.map(async (job) => {
         let data = {}
         let URL = job.baseURL;
@@ -117,9 +122,21 @@ export const getWorkdayJobs = async (company_list) => {
             data["company_name"] = job.companyName;
             data["job_title"] = jobData.title;
             data["job_link"] = jobData.externalUrl;
-            data["location"] = jobData.country.descriptor;
+            // jobData.jobRequisitionLocation.country.descriptor
+            // check if country is present in the job data
+            if (jobData.jobRequisitionLocation) {
+                data["location"] = jobData.jobRequisitionLocation.country.descriptor;
+            }else{
+                data["location"] = jobData.country.descriptor;
+            }
             data["posting_date"] = jobData.startDate;
-            allJobData.push(data);
+            // check if job_link is present in the allJobData
+            if (!job_links_seen.has(data["job_link"])) {
+                job_links_seen.add(data["job_link"]);
+                allJobData.push(data);
+            }
+
+            // allJobData.push(data);
         }
         catch (error) {
             console.log("Error in fetching job data", job_URL);
@@ -175,7 +192,7 @@ export const filterWorkDayJobs = async () => {
     filteredJobs = filteredJobs.filter(job => job !== null);
 
     // writeToCsv(filteredJobs, "workday");
-    writeToExcel(filteredJobs, "workday");
+    writeToExcel(filteredJobs, fileName);
 
     return filteredJobs;
 }
