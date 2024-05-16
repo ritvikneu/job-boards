@@ -104,9 +104,9 @@ export const getLeverJobs = async () => {
 }
 
 export const filterLeverJobs = async () => {
-    console.log("inside filter lever jobs");
     const lever_list = await getLeverJobs();
     const filtered_lever_list = [];
+    console.log("inside filter lever jobs");
     let maxCount = 0;
 
     const filter_lever = lever_list.map(async data => {
