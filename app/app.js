@@ -8,6 +8,8 @@ import * as leverService from "./services/lever-service.js";
 // import * as workdayService from "./services/workday-service-all.js";
 import * as workdayService from "./services/workday-service.js";
 
+import * as diceService from "./services/dice-service.js";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -21,7 +23,7 @@ URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
 // ghService.getFilteredGreenHouseJobs();
 
 // GreenHouse Jobs with Embed
-ghEmbedService.getFilteredGreenHouseJobs();
+// ghEmbedService.getFilteredGreenHouseJobs();
 
 
 // // Lever Jobs
@@ -33,8 +35,12 @@ ghEmbedService.getFilteredGreenHouseJobs();
 // // set offset in workdayFetch and appliedFacets in workdayJobFetch
 // workdayService.filterWorkDayJobs();
 
-// to run the workday jobs without filter
-// workdayService.workdayJobsNoFilter();
+// // Dice Jobs
+// // to run the dice jobs
+// diceService.diceJobsFetch();
+diceService.getAllDiceJobs();
+// diceService.filterDiceJobs();
+
 
 
 
@@ -52,6 +58,8 @@ ghEmbedService.getFilteredGreenHouseJobs();
 // workdayService.workdayCall();
 // workdayService.filterWorkDayJobs();
 // workdayService.workdayJobFetch(URL);
+
+// process.exit(0);
 
 
 export {

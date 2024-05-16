@@ -114,9 +114,9 @@ export const getGreenHouseJobs = async () => {
 }
 
 export const filterGreenHouseJobs = async () => {
-    console.log("inside filter greenhouse jobs");
     const greenhouse_list = await getGreenHouseJobs();
     const filtered_greenhouse_list = [];
+    console.log("inside filter greenhouse jobs");
     let maxCount = 0;
 
     const filter_greenhouse = greenhouse_list.map(async data => {
@@ -140,9 +140,9 @@ export const filterGreenHouseJobs = async () => {
                     return data;
                 }
                 // if posting date is not available, then return the data
-                else if (!posting_date){
-                    return data;
-                }
+                // else if (!posting_date){
+                //     return data;
+                // }
             }
         }
         return null;
@@ -170,7 +170,7 @@ export const getFilteredGreenHouseJobs = async () => {
     console.log("inside get filtered greenhouse jobs");
     const greenhouse_list = await filterGreenHouseJobs();
     console.log("greenhouse_list");
-    // writeToCsv(greenhouse_list, "greenhouse");
+    // writeToCsv(greenhouse_list, fileName);
     writeToExcel(greenhouse_list, fileName);
 }
 
@@ -208,75 +208,75 @@ function clearConsole() {
 }
 
 
-export const filterGreenHouseJobsBatch = async () => {
-    console.log("inside filter greenhouse jobs");
-    const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = [];
-    let maxCount = 0;
+// export const filterGreenHouseJobsBatch = async () => {
+//     console.log("inside filter greenhouse jobs");
+//     const greenhouse_list = await getGreenHouseJobs();
+//     const filtered_greenhouse_list = [];
+//     let maxCount = 0;
 
-    // Define the batch size for processing
-    const batchSize = 100;
+//     // Define the batch size for processing
+//     const batchSize = 100;
 
-    // Loop through the greenhouse_list in batches
-    for (let i = 0; i < greenhouse_list.length; i += batchSize) { 
-        const batch = greenhouse_list.slice(i, i + batchSize);
+//     // Loop through the greenhouse_list in batches
+//     for (let i = 0; i < greenhouse_list.length; i += batchSize) { 
+//         const batch = greenhouse_list.slice(i, i + batchSize);
 
-        // Process each batch sequentially
-        for (const data of batch) {
-            let location_to_check = data["location"].toLowerCase();
-            const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+//         // Process each batch sequentially
+//         for (const data of batch) {
+//             let location_to_check = data["location"].toLowerCase();
+//             const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
 
-            if (location_matched) {
-                let title_to_check = data["job_title"].toLowerCase();
-                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+//             if (location_matched) {
+//                 let title_to_check = data["job_title"].toLowerCase();
+//                 const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
 
-                let gh_job_link = data["job_link"];
+//                 let gh_job_link = data["job_link"];
 
-                if (title_matched) {
-                    let posting_date = await getJobPostingDates(gh_job_link);
-                    data["posting_date"] = posting_date;
-                    if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                        filtered_greenhouse_list.push(data);
-                        maxCount++;
-                    }
-                }
-            }
-        }
-    }
+//                 if (title_matched) {
+//                     let posting_date = await getJobPostingDates(gh_job_link);
+//                     data["posting_date"] = posting_date;
+//                     if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+//                         filtered_greenhouse_list.push(data);
+//                         maxCount++;
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    return filtered_greenhouse_list;
-}
+//     return filtered_greenhouse_list;
+// }
 
-export const filterGreenHouseJobsSeq = async () => {
-    const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = [];
-    let maxCount = 0;
-    console.log("inside filter greenhouse jobs");
+// export const filterGreenHouseJobsSeq = async () => {
+//     const greenhouse_list = await getGreenHouseJobs();
+//     const filtered_greenhouse_list = [];
+//     let maxCount = 0;
+//     console.log("inside filter greenhouse jobs");
 
-    // Loop through each data item sequentially
-    for (let data of greenhouse_list) {
-        let location_to_check = data["location"].toLowerCase();
-        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+//     // Loop through each data item sequentially
+//     for (let data of greenhouse_list) {
+//         let location_to_check = data["location"].toLowerCase();
+//         const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
 
-        if (location_matched) {
-            let title_to_check = data["job_title"].toLowerCase();
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+//         if (location_matched) {
+//             let title_to_check = data["job_title"].toLowerCase();
+//             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
 
-            let gh_job_link = data["job_link"];
+//             let gh_job_link = data["job_link"];
 
-            if (title_matched) {
-                let posting_date = await getJobPostingDates(gh_job_link);
-                data["posting_date"] = posting_date;
-                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                    filtered_greenhouse_list.push(data);
-                    maxCount++;
-                }
-            }
-        }
+//             if (title_matched) {
+//                 let posting_date = await getJobPostingDates(gh_job_link);
+//                 data["posting_date"] = posting_date;
+//                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+//                     filtered_greenhouse_list.push(data);
+//                     maxCount++;
+//                 }
+//             }
+//         }
 
-        // Release memory associated with the resolved promise
-        data = null;
-    }
+//         // Release memory associated with the resolved promise
+//         data = null;
+//     }
 
-    return filtered_greenhouse_list;
-}
+//     return filtered_greenhouse_list;
+// }
