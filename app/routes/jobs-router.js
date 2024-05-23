@@ -8,12 +8,12 @@ const router = express.Router();
 
 router.route('/greenhouse')
         .get(jobsController.getGreenhouse);
-// router.route('/lever')
-//         .get(jobsController.getLever);
-// router.route('/workday')
-//         .get(jobsController.getWorkday);
-// router.route('/dice')
-//         .get(jobsController.getDice);
+router.route('/lever')
+        .get(jobsController.getLever);
+router.route('/workday')
+        .get(jobsController.getWorkday);
+router.route('/dice')
+        .get(jobsController.getDice);
 
 
 export default router;
