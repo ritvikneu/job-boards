@@ -81,14 +81,6 @@ export const getGreenHouseJobs = async () => {
                             data["company_name"] = company.name
                             data["job_title"] = link.innerHTML
                             data["job_link"] = GH_URL + link.getAttribute('href')
-                            // https://wing.com/careers/7432119002?gh_jid=7432119002
-                            // get the job_id from the link gh_jid
-
-                            // let job_id = link.getAttribute('href').split('?gh_jid=')[1];
-                            // data["job_link"] = GH_URL + "/"+ data["company_name"]+ "/jobs/" + job_id
-
-
-
                         });
                         opening.querySelectorAll('span.location').forEach(async location => {
                             data["location"] = location.innerHTML
@@ -174,6 +166,7 @@ export const getFilteredGreenHouseJobs = async () => {
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, "greenhouse");
     writeToExcel(greenhouse_list, fileName);
+    return "Filtered Greenhouse Jobs";
 }
 
 

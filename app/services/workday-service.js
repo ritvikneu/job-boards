@@ -38,7 +38,7 @@ export const workdayFetch = async (url, offset, companyName) => {
         }
         return data.jobPostings;
     } catch (error) {
-        console.error('Error fetching jobs:', error);
+        console.error('Error in fetching jobs:', error);
     }
 }
 
@@ -116,6 +116,9 @@ export const getWorkdayJobs = async (company_list) => {
     const jobsInfo = jobPostings.map(async (job) => {
         let data = {}
         let URL = job.baseURL;
+        // job.externalPath = vertexinc/job/London-United-Kingdom/Digital-Marketing-Specialist--Europe_JR100862
+        // fetch the job data from the externalPath starting from /job return job/London-United-Kingdom/Digital-Marketing-Specialist--Europe_JR100862
+        // let job_URL = job.externalPath.split('/job')[1];
         let job_URL = URL.slice(0, -5) + job.externalPath;
         try {
             let jobData = await workdayJobFetch(job_URL);
@@ -139,7 +142,7 @@ export const getWorkdayJobs = async (company_list) => {
             // allJobData.push(data);
         }
         catch (error) {
-            console.log("Error in fetching job data", job_URL);
+            console.log("Error fetching job data", job_URL);
         }
 
     }

@@ -14,8 +14,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 route(app);
-let URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/job/Remote-Colorado/Restaurant-Solutions-Business-Consultant_R-10322313'
-URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
 
 // RUN ONLY ONE OF THE SERVICE AT A TIME - GREENHOUSE or LEVER or WORKDAY
 // // GreenHouse Jobs
@@ -33,13 +31,14 @@ URL = 'https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/EXT/jobs'
 // // Workday Jobs
 // // to run the workday jobs with filter
 // // set offset in workdayFetch and appliedFacets in workdayJobFetch
-// workdayService.filterWorkDayJobs();
+workdayService.filterWorkDayJobs();
 
 // // Dice Jobs
 // // to run the dice jobs
-// diceService.diceJobsFetch();
-diceService.getAllDiceJobs();
 // diceService.filterDiceJobs();
+
+// const job_link = 'https://www.dice.com/job-detail/04beaa5b-2778-4f51-b14a-afee043489f3'
+// diceService.getJobPositionId(job_link);
 
 
 

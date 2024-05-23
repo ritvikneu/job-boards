@@ -40,6 +40,7 @@ export const getAllCompanies = async () => {
     });
 
     // writeToCsvCompanyNames(csvCompanyNames, "lever");
+    // process.exit();
     return company_list;
 }
 
@@ -148,7 +149,6 @@ export const filterLeverJobs = async () => {
 }
 
 export const getFilteredLeverJobs = async () => {
-    console.log("inside get filtered Lever jobs");
     const lever_list = await filterLeverJobs();
     console.log("lever_list");
     // writeToCsv(lever_list, "Lever");

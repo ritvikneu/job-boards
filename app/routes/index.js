@@ -1,6 +1,6 @@
 import jobsRouter from './jobs-router.js';
 
 const route = (app) => {
-    app.use('/get_jobs',jobsRouter);
+    app.use('/',jobsRouter);
 }
 export default route;
