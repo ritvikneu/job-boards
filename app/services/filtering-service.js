@@ -156,3 +156,4 @@ const locationChecker = new LocationChecker();
 const filterJob = new FilterJobs();
 
 export { titleChecker, locationChecker, filterJob };
+export {TitleChecker, LocationChecker, FilterJobs}

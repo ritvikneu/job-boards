@@ -1,4 +1,4 @@
-import { filterJob } from './filtering-service.js';
+import { FilterJobs } from './filtering-service.js';
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
@@ -7,6 +7,7 @@ config();
 
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 
+const filterJob = new FilterJobs();
 
 const fileName = process.env.FILE_NAME
 
@@ -105,7 +106,6 @@ export const getGreenHouseJobs = async () => {
 
     }
 
-
     // writeToCsvCompanyNames(company_set, "g-test");
     // process.exit();
     return greenhouse_list;
@@ -157,7 +157,6 @@ export const filterGreenHouseJobs = async () => {
 
     return filtered_greenhouse_list;
 }
-
 
 
 export const getFilteredGreenHouseJobs = async () => {

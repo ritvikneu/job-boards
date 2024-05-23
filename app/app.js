@@ -18,7 +18,7 @@ route(app);
 // RUN ONLY ONE OF THE SERVICE AT A TIME - GREENHOUSE or LEVER or WORKDAY
 // // GreenHouse Jobs
 // // to run the greenhouse jobs with filter
-// ghService.getFilteredGreenHouseJobs();
+ghService.getFilteredGreenHouseJobs();
 
 // GreenHouse Jobs with Embed
 // ghEmbedService.getFilteredGreenHouseJobs();
@@ -31,7 +31,7 @@ route(app);
 // // Workday Jobs
 // // to run the workday jobs with filter
 // // set offset in workdayFetch and appliedFacets in workdayJobFetch
-workdayService.filterWorkDayJobs();
+// workdayService.filterWorkDayJobs();
 
 // // Dice Jobs
 // // to run the dice jobs

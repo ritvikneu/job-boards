@@ -5,7 +5,7 @@ import * as ghService from "../services/greenhouse-service.js";
 import * as ghEmbedService from "../services/greenEmbed-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as workdayService from "../services/workday-service.js";
-
+import * as diceService from "../services/dice-service.js";
 
 export const get = async (request, response) => {
     // try {
@@ -17,7 +17,22 @@ export const get = async (request, response) => {
 
 
 export const getGreenhouse = async (request, response) => { 
-    res = ghService.getFilteredGreenHouseJobs();
+    const res = await ghService.getFilteredGreenHouseJobs();
+    response.json({message: res});
+}
+
+export const getLever = async (request, response) => { 
+    const res = await leverService.getFilteredLeverJobs();
+    response.json({message: res});
+}
+
+export const getWorkday = async (request, response) => { 
+    const res = await workdayService.filterWorkDayJobs();
+    response.json({message: res});
+}
+
+export const getDice = async (request, response) => { 
+    const res = await diceService.filterDiceJobs();
     response.json({message: res});
 }
 
