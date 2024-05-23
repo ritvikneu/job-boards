@@ -106,6 +106,8 @@ class FilterJobs {
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
+        
+        if (validParts.length === 0 || validParts.length>20) return false;
 
         for (let r = 0; r <= validParts.length; r++) {
             for (let combo of await this.getCombinations(validParts, r)) {

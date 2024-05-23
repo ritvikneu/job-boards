@@ -2,6 +2,11 @@
 import { filterJob, locationChecker } from './filtering-service.js';
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 import { write } from 'fs';
+import axios from 'axios';
+import jsdom from 'jsdom';
+const { JSDOM } = jsdom;
+import { config } from 'dotenv';
+config();
 
 
 async function getDiceJobs(queryParams) {
@@ -42,32 +47,6 @@ async function getDiceJobs(queryParams) {
 
 // Call the function to get the Dice jobs
 export const diceJobsFetch = async () => {
-    // const queryParams = {
-    //     q: 'software',
-    //     countryCode2: 'US',
-    //     radius: 30,
-    //     radiusUnit: 'mi',
-    //     page: 1,
-    //     pageSize: 10,
-    //     facets: [
-    //         'employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType',
-    //         'easyApply', 'isRemote', 'willingToSponsor'
-    //     ],
-    //     'filters.employmentType': 'FULLTIME',
-    //     'filters.employerType': 'Direct Hire',
-    //     'filters.postedDate': 'ONE',
-    //     fields: [
-    //         'id', 'jobId', 'guid', 'summary', 'title', 'postedDate', 'modifiedDate', 'jobLocation.displayName',
-    //         'detailsPageUrl', 'salary', 'clientBrandId', 'companyPageUrl', 'companyLogoUrl', 'companyLogoUrlOptimized',
-    //         'positionId', 'companyName', 'employmentType', 'isHighlighted', 'score', 'easyApply', 'employerType',
-    //         'workFromHomeAvailability', 'workplaceTypes', 'isRemote', 'debug', 'jobMetadata', 'willingToSponsor'
-    //     ],
-    //     culture: 'en',
-    //     recommendations: true,
-    //     interactionId: 0,
-    //     fj: true,
-    //     includeRemote: true
-    // };
     const queryParams = {
         page: 3,
         pageSize: 1000,
@@ -90,7 +69,7 @@ export const diceJobsFetch = async () => {
 }
 
 
-export const getAllDiceJobs = async () => {
+export const filterDiceJobs = async () => {
     const allDiceJobs = await diceJobsFetch();
     const filteredJobs = [];
     const job_links_seen = new Set();
@@ -101,7 +80,9 @@ export const getAllDiceJobs = async () => {
         data["job_title"] = job.title;
         data["job_link"] = job.detailsPageUrl;
         data["location"] = job.jobLocation.displayName;
-        data["posting_date"] = job.postedDate;
+        // format the current date to the same format as the posting date(YYYY-MM-DD)
+        let formatted_date = new Date(job.postedDate);
+        data["posting_date"] = formatted_date;
 
         let title_to_check = data["job_title"].toLowerCase();
 
@@ -109,7 +90,7 @@ export const getAllDiceJobs = async () => {
             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
             if (title_matched) {
                 // console.log("title:", title_to_check);
-
+                data["postion_id"] = await getJobPositionId(data["job_link"]);
                 if (!job_links_seen.has(data["job_link"])) {
                     job_links_seen.add(data["job_link"]);
                     filteredJobs.push(data);
@@ -127,10 +108,42 @@ export const getAllDiceJobs = async () => {
 
 }
 
-export const filterDiceJobs = async () => {
-    const diceJobs = await getAllDiceJobs();
-    console.log("inside filter dice jobs");
-    // console.log("diceJobs", diceJobs);
+export const getJobPositionId = async (job_link) => {
+    let response = null;
 
+    try {
+        response = await axios.get(job_link);
 
-}
+        if (response.status == 200) {
+            const htmlDom = new JSDOM(response.data);
+
+            // Fetch the aside tag with the class 'legalInfo'
+            const asideTag = htmlDom.window.document.querySelector('aside.legalInfo');
+
+            if (asideTag) {
+                // Get the li tag with the data-testid 'legalInfo-referenceCode'
+                const jobPositionElement = asideTag.querySelector('li[data-testid="legalInfo-referenceCode"]');
+
+                if (jobPositionElement) {
+                    // Extract the position ID text
+                    const jobPositionId = jobPositionElement.textContent.trim().replace('Position Id:', '').trim();
+                    // console.log("Job Position ID:", jobPositionId);
+                    return jobPositionId;
+                } else {
+                    console.log("Job Position ID element not found");
+                    return 0;
+                }
+            } else {
+                console.log("Aside tag with class 'legalInfo' not found");
+                return 0;
+            }
+        } else {
+            console.log("Cannot fetch job position id");
+            return 0;
+        }
+    } catch (error) {
+        console.log("Error in fetching job position id");
+        return 0;
+    }
+};
+
