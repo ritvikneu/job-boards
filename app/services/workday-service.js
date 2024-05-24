@@ -1,13 +1,18 @@
 import { parse } from "dotenv";
-import { readFileSync } from 'fs';
-import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
+
+import { readFileSync } from 'fs';import { FileHandler } from './file_creation-service.js';
+const fileHandler = new FileHandler();
+
 import axios from 'axios';
-import { filterJob, locationChecker } from './filtering-service.js';
 import { config } from 'dotenv';
 config();
 
+import { FilterJobs, LocationChecker } from './filtering-service.js';
+const filterJob = new FilterJobs();
+const locationChecker = new LocationChecker();
 
-const fileName = process.env.FILE_NAME
+
+const fileName = process.env.FILE_WDAY
  
 
 export const workdayFetch = async (url, offset, companyName) => {
@@ -191,11 +196,14 @@ export const filterWorkDayJobs = async () => {
     // Wait for all promises to resolve
     let filteredJobs = await Promise.all(jobPosting);
 
-    // Filter out null values (jobs that didn't meet the criteria)
-    filteredJobs = filteredJobs.filter(job => job !== null);
+    // Filter out null values (jobs that didn't meet the criteria) and sort by posting date
+    // filteredJobs = filteredJobs.filter(job => job !== null );
+    filteredJobs = filteredJobs.filter(job => job !== null).sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+
 
     // writeToCsv(filteredJobs, "workday");
-    writeToExcel(filteredJobs, fileName);
+    // writeToExcel(filteredJobs, fileName);
+    fileHandler.writeToExcel(filteredJobs, fileName);
 
     return filteredJobs;
 }

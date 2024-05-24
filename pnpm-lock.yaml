@@ -23,12 +23,21 @@ dependencies:
   fs:
     specifier: 0.0.1-security
     version: 0.0.1-security
+  js-combinatorics:
+    specifier: ^2.1.2
+    version: 2.1.2
   jsdom:
     specifier: ^24.0.0
     version: 24.0.0
+  mailtrap:
+    specifier: ^3.3.0
+    version: 3.3.0(nodemailer@6.9.13)
   mongoose:
     specifier: ^8.2.0
     version: 8.2.0
+  nodemailer:
+    specifier: ^6.9.13
+    version: 6.9.13
 
 packages:
 
@@ -733,6 +742,10 @@ packages:
     resolution: {integrity: sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==}
     dev: false
 
+  /js-combinatorics@2.1.2:
+    resolution: {integrity: sha512-/1AY2bYwxajoaKjPzvgQ80U7lcucU71ubzFPVgZGmzbDGn3R18ZQUZfD69+4Idg4JfNcq6trwD6I+dRfVnr/tg==}
+    dev: false
+
   /jsdom@24.0.0:
     resolution: {integrity: sha512-UDS2NayCvmXSXVP6mpTj+73JnNQadZlr9N68189xib2tx5Mls7swlTNao26IoHv46BZJFvXygyRtyXd1feAk1A==}
     engines: {node: '>=18'}
@@ -850,6 +863,24 @@ packages:
 
   /lodash.uniq@4.5.0:
     resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
+    dev: false
+
+  /mailtrap@3.3.0(nodemailer@6.9.13):
+    resolution: {integrity: sha512-lFk7Cuv+qccAGMc9EMPwQiHp2+zG5wPorWdDn29NiLCA0YwYLEtPAKz/EvkLue3kcRA2KukgLOSwEbzL/Fj7Xw==}
+    engines: {node: '>=16.20.1', yarn: '>=1.22.17'}
+    peerDependencies:
+      '@types/nodemailer': ^6.4.9
+      nodemailer: ^6.9.4
+    peerDependenciesMeta:
+      '@types/nodemailer':
+        optional: true
+      nodemailer:
+        optional: true
+    dependencies:
+      axios: 1.6.8
+      nodemailer: 6.9.13
+    transitivePeerDependencies:
+      - debug
     dev: false
 
   /media-typer@0.3.0:
@@ -1002,6 +1033,11 @@ packages:
   /negotiator@0.6.3:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
+    dev: false
+
+  /nodemailer@6.9.13:
+    resolution: {integrity: sha512-7o38Yogx6krdoBf3jCAqnIN4oSQFx+fMa0I7dK1D+me9kBxx12D+/33wSb+fhOCtIxvYJ+4x4IMEhmhCKfAiOA==}
+    engines: {node: '>=6.0.0'}
     dev: false
 
   /normalize-path@3.0.0:

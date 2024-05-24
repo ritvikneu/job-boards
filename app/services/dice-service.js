@@ -1,6 +1,4 @@
 
-import { filterJob, locationChecker } from './filtering-service.js';
-import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 import { write } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
@@ -8,6 +6,11 @@ const { JSDOM } = jsdom;
 import { config } from 'dotenv';
 config();
 
+import { FilterJobs } from './filtering-service.js';
+const filterJob = new FilterJobs();
+
+import { FileHandler } from './file_creation-service.js';
+const fileHandler = new FileHandler();
 
 async function getDiceJobs(queryParams) {
     const baseUrl = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
@@ -48,7 +51,7 @@ async function getDiceJobs(queryParams) {
 // Call the function to get the Dice jobs
 export const diceJobsFetch = async () => {
     const queryParams = {
-        page: 3,
+        page: 1,
         pageSize: 1000,
         facets: ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
         'filters.employmentType': 'FULLTIME',
@@ -101,7 +104,12 @@ export const filterDiceJobs = async () => {
     });
 
     const diceJobs = await Promise.all(job_posting);
-    writeToExcel(filteredJobs, 'dice');
+    // writeToExcel(filteredJobs, 'dice');
+    // sort all the jobs by company name
+    filteredJobs.sort((a, b) => {
+        return a.company_name.localeCompare(b.company_name);
+    });
+    fileHandler.writeToExcel(filteredJobs, 'dice');
     return filteredJobs;
     // writeToExcel(filteredJobs, 'dice');
     // console.log("filterDiceJobs", filterDiceJobs);

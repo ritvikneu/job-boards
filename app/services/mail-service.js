@@ -1,10 +1,11 @@
-const { MailtrapClient } = require("mailtrap");
+// const { MailtrapClient } = require("mailtrap");
+import { MailtrapClient } from "mailtrap";
 
 const TOKEN = "6ea8a4c56498dc3fff42c01a3f1de90f";
 const ENDPOINT = "https://send.api.mailtrap.io/";
 
 
-function sendMail(subject,content) {
+export const sendMail = (subject,content) => {
     const client = new MailtrapClient({ endpoint: ENDPOINT, token: TOKEN });
 
     const sender = {

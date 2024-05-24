@@ -21,6 +21,11 @@ export const getGreenhouse = async (request, response) => {
     response.json({message: res});
 }
 
+export const getGreenhouseEmbed = async (request, response) => { 
+    const res = await ghEmbedService.getFilteredGreenHouseJobs();
+    response.json({message: res});
+}
+
 export const getLever = async (request, response) => { 
     const res = await leverService.getFilteredLeverJobs();
     response.json({message: res});
