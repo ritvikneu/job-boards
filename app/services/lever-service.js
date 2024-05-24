@@ -1,14 +1,17 @@
-import { filterJob } from './filtering-service.js';
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 
-import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
+import { FileHandler } from './file_creation-service.js';
+const fileHandler = new FileHandler();
+
 import { config } from 'dotenv';
 config();
+import { FilterJobs } from './filtering-service.js';
+const filterJob = new FilterJobs();
 
 
-const fileName = process.env.FILE_NAME
+const fileName = process.env.FILE_LEVER
 export const getAllCompanies = async () => {
     console.log("inside get all companies for lever");
 
@@ -108,7 +111,6 @@ export const filterLeverJobs = async () => {
     const lever_list = await getLeverJobs();
     const filtered_lever_list = [];
     console.log("inside filter lever jobs");
-    let maxCount = 0;
 
     const filter_lever = lever_list.map(async data => {
 
@@ -137,22 +139,30 @@ export const filterLeverJobs = async () => {
     // Wait for all promises to resolve
     const results = await Promise.all(filter_lever);
 
-    // Filter out null values and add valid items to the filtered list
+    // Filter out null values and add valid items to the filtered list and sort by posting date
     results.forEach(data => {
         if (data !== null) {
             filtered_lever_list.push(data);
-            maxCount++;
         }
     });
+    filtered_lever_list.sort((a, b) => {
+        return new Date(b.posting_date) - new Date(a.posting_date);
+    }
+    );
+
+
 
     return filtered_lever_list;
 }
 
 export const getFilteredLeverJobs = async () => {
-    const lever_list = await filterLeverJobs();
+    const filteredJobs = await filterLeverJobs();
     console.log("lever_list");
-    // writeToCsv(lever_list, "Lever");
-    writeToExcel(lever_list, fileName);
+    // writeToCsv(filteredJobs, "Lever");
+    // writeToExcel(filteredJobs, fileName);
+    
+    fileHandler.writeToExcel(filteredJobs, fileName);
+    return filteredJobs;
 }
 
 export const getJobPostingDates = async (job_link) => {

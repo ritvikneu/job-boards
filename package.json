@@ -20,7 +20,9 @@
     "fs": "0.0.1-security",
     "js-combinatorics": "^2.1.2",
     "jsdom": "^24.0.0",
-    "mongoose": "^8.2.0"
+    "mailtrap": "^3.3.0",
+    "mongoose": "^8.2.0",
+    "nodemailer": "^6.9.13"
   },
   "packageManager": "pnpm@8.13.1+sha256.9e5f62ce5f2b7d4ceb3c2848f41cf0b33032c24d683c7088b53f62b1885fb246"
 }

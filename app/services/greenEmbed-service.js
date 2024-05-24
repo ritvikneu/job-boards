@@ -1,14 +1,17 @@
-import { filterJob } from './filtering-service.js';
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 import { config } from 'dotenv';
 config();
 
-import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
+import { FileHandler } from './file_creation-service.js';
+const fileHandler = new FileHandler();
+
+import { FilterJobs } from './filtering-service.js';
+const filterJob = new FilterJobs();
 
 
-const fileName = process.env.FILE_NAME
+const fileName = process.env.FILE_EMBED
 
 export const getAllCompanies = async () => {
     console.log("inside get all companies");
@@ -167,11 +170,14 @@ export const filterGreenHouseJobs = async () => {
 
 
 export const getFilteredGreenHouseJobs = async () => {
-    console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobs();
+    console.log("inside get filtered greenhouse Embed jobs");
+    const greenembed_list = await filterGreenHouseJobs();
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, fileName);
-    writeToExcel(greenhouse_list, fileName);
+    // writeToExcel(greenhouse_list, fileName);
+
+    fileHandler.writeToExcel(greenembed_list, fileName);
+    return greenembed_list; 
 }
 
 

@@ -1,15 +1,17 @@
-import { FilterJobs } from './filtering-service.js';
+
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 import { config } from 'dotenv';
 config();
 
-import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
+import { FileHandler } from './file_creation-service.js';
+const fileHandler = new FileHandler();
 
+import { FilterJobs } from './filtering-service.js';
 const filterJob = new FilterJobs();
 
-const fileName = process.env.FILE_NAME
+const fileName = process.env.FILE_GH
 
 export const getAllCompanies = async () => {
     console.log("inside get all companies");
@@ -116,7 +118,6 @@ export const filterGreenHouseJobs = async () => {
     console.log("inside filter greenhouse jobs");
     const greenhouse_list = await getGreenHouseJobs();
     const filtered_greenhouse_list = {};
-    let maxCount = 0;
 
     const filter_greenhouse = greenhouse_list.map(async data => {
 
@@ -151,8 +152,12 @@ export const filterGreenHouseJobs = async () => {
     results.forEach(data => {
         if (data !== null) {
             filtered_greenhouse_list.push(data);
-            maxCount++;
         }
+    });
+
+    // sort the filtered list by posting date
+    filtered_greenhouse_list.sort((a, b) => {
+        return new Date(b.posting_date) - new Date(a.posting_date);
     });
 
     return filtered_greenhouse_list;
@@ -164,8 +169,9 @@ export const getFilteredGreenHouseJobs = async () => {
     const greenhouse_list = await filterGreenHouseJobsSeq();
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, "greenhouse");
-    writeToExcel(greenhouse_list, fileName);
-    return "Filtered Greenhouse Jobs";
+    // writeToExcel(greenhouse_list, fileName);
+    fileHandler.writeToExcel(greenhouse_list, fileName);
+    return greenhouse_list;
 }
 
 

@@ -8,6 +8,8 @@ const router = express.Router();
 
 router.route('/greenhouse')
         .get(jobsController.getGreenhouse);
+router.route('/greenembed')
+        .get(jobsController.getGreenhouseEmbed);
 router.route('/lever')
         .get(jobsController.getLever);
 router.route('/workday')
