@@ -10,10 +10,12 @@ import { config } from 'dotenv';
 config();
 
 import { FilterJobs, LocationChecker } from './filtering-service.js';
+import { count } from "console";
 const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 
 const fileName = process.env.FILE_ORACLOUD
+
 export const fetchJobs = async (companyName, url, jobSearchUrl) => {
 
     console.log('Fetching jobs for:', companyName);
@@ -36,6 +38,7 @@ export const fetchJobs = async (companyName, url, jobSearchUrl) => {
             data["job_title"] = job.Title;
             data["job_link"] = jobSearchUrl + job.Id;
             data["location"] = job.PrimaryLocation;
+            data["country"] = job.PrimaryLocationCountry;
             data["posting_date"] = job.PostedDate;
             jobData.push(data);
         });
@@ -83,23 +86,32 @@ export const filterOracleCloudJobs = async () => {
 
 
     const job_posting = allJobs.map(async job => {
-        let posting_date = job["posting_date"];
-        if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-            let title_to_check = job["job_title"].toLowerCase();
-            // console.log("title_to_check", title_to_check);
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-            // console.log("title_matched", title_matched);
-            if (title_matched) {
-                return job; // Keep the job if it matches all criteria
+        let country_check = job["country"].toLowerCase();
+        if (country_check === 'united states' || country_check === 'us' || country_check === 'usa') {
+            let posting_date = job["posting_date"];
+
+            if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                let title_to_check = job["job_title"].toLowerCase();
+                // console.log("title_to_check", title_to_check);
+                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+                // console.log("title_matched", title_matched);
+                if (title_matched) {
+                    return job; // Keep the job if it matches all criteria
+                }
+                // return job;
             }
-            // return job;
         }
         return null;
 
     });
 
     let filteredJobs = await Promise.all(job_posting);
-    filteredJobs = filteredJobs.filter(job => job !== null);
+    // remove null values from the array and sort by posting date
+    filteredJobs = filteredJobs.filter(job => job !== null).sort((a, b) => {
+        return new Date(b.posting_date) - new Date(a.posting_date);
+    }
+    );
+    fileHandler.writeToExcel(filteredJobs, 'oracloud');
     console.log('Total Oracle Cloud Jobs:', filteredJobs.length);
     return filteredJobs;
 

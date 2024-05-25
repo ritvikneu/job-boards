@@ -198,7 +198,7 @@ export const filterWorkDayJobs = async () => {
     // Wait for all promises to resolve
     let filteredJobs = await Promise.all(jobPosting);
 
-    // Filter out null values (jobs that didn't meet the criteria) and sort by posting date
+    // Filter out null values (jobs that didn't meet the criteria) and sort by posting date and format the date
     // filteredJobs = filteredJobs.filter(job => job !== null );
     filteredJobs = filteredJobs.filter(job => job !== null).sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
 
