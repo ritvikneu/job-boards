@@ -34,8 +34,9 @@ class FileHandler {
             worksheet = this.workbook.addWorksheet(listing);
             worksheet.columns = [
                 { header: 'Company Name', key: 'company_name', width: 20 },
-                { header: 'Job Title', key: 'job_title', width: 50 },
-                { header: 'Link', key: 'job_link', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
+                // { header: 'Job Title', key: 'job_title', width: 50 },
+                { header: 'Job Info', key: 'job_title', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
+                // { header: 'Link', key: 'job_link', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
                 { header: 'Location', key: 'location', width: 50 },
                 { header: 'Posting Date', key: 'posting_date', width: 50 },
                 { header: 'Job ID', key: 'postion_id', width: 50 }
@@ -43,8 +44,8 @@ class FileHandler {
         }
 
         data.forEach(row => {
-            row["job_link"] = {
-                text: row["job_link"],
+            row["job_title"] = {
+                text: row["job_title"],
                 hyperlink: row["job_link"]
             };
             worksheet.addRow(row);
@@ -54,7 +55,8 @@ class FileHandler {
             await this.workbook.xlsx.writeFile(excelFilePath);
             sendMail(listing, excelFileName);
 
-            console.log('Excel file saved:', listing);
+            console.log('Excel file saved:----------------', listing);
+            printSuccessMessage(listing);
         } catch (err) {
             console.log("Error occurred while saving Excel file:", err);
         }
@@ -96,6 +98,19 @@ class FileHandler {
             console.log("Error occurred while saving CSV file for company names:", error);
         }
     }
+}
+
+function printSuccessMessage(listing) {
+   
+    console.log("------------^^^^^^^^^^-----------------");
+    console.log("--------------------------------------");
+    console.log("--------------------------------------");
+    console.log(`----------${listing}--------------------`);
+    console.log("--------------------------------------");
+    console.log("--------------------------------------");
+    console.log("--------------------------------------");
+    console.log("-----------###########-----------------");
+
 }
 
 export { FileHandler};
