@@ -56,7 +56,8 @@ export const diceJobsFetch = async () => {
         facets: ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
         'filters.employmentType': 'FULLTIME',
         'filters.employerType': 'Direct Hire',
-        'filters.postedDate': 'ONE',
+        // 'filters.postedDate': 'ONE',
+        'filters.clientBrandNameFilter': 'Goldman Sachs & Co.'
         // fields: [
         //     'id', 'jobId', 'guid', 'summary', 'title', 'postedDate', 'modifiedDate', 'jobLocation.displayName'
         // ],

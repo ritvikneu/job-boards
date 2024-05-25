@@ -10,6 +10,8 @@ import * as workdayService from "./services/workday-service.js";
 
 import * as diceService from "./services/dice-service.js";
 
+import * as oraCloudService from "./services/oraclecloud-service.js";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -41,6 +43,8 @@ route(app);
 // diceService.getJobPositionId(job_link);
 
 
+// // Oracle Cloud Jobs
+// oraCloudService.getAllCompanies();
 
 
 // ghService.getFilteredGreenHouseJobs();

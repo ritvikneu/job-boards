@@ -6,6 +6,7 @@ import * as ghEmbedService from "../services/greenEmbed-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as workdayService from "../services/workday-service.js";
 import * as diceService from "../services/dice-service.js";
+import * as oraCloudService from "../services/oraclecloud-service.js";
 
 export const get = async (request, response) => {
     // try {
@@ -38,6 +39,13 @@ export const getWorkday = async (request, response) => {
 
 export const getDice = async (request, response) => { 
     const res = await diceService.filterDiceJobs();
+    response.json({message: res});
+}
+
+
+
+export const getOraCloud = async (request, response) => { 
+    const res = await oraCloudService.filterOracleCloudJobs();;
     response.json({message: res});
 }
 

@@ -1,6 +1,8 @@
 import { parse } from "dotenv";
 
-import { readFileSync } from 'fs';import { FileHandler } from './file_creation-service.js';
+import { readFileSync } from 'fs';
+
+import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
 import axios from 'axios';

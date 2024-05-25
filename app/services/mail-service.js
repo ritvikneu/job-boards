@@ -53,7 +53,7 @@ export const sendMailAttachment = (subject, content) => {
   }
 };
 
-sendMailAttachment("Jobs_May23", "---------- Please find the attached Excel file with the job listings ----------");
+// sendMailAttachment("Jobs_May23", "---------- Please find the attached Excel file with the job listings ----------");
 
 
 export const sendMail = (subject,content) => {
