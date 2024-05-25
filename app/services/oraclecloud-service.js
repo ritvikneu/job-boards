@@ -5,6 +5,8 @@ import { readFileSync } from 'fs';
 import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
+import { logger } from '../middleware/logger.js';
+
 import axios from 'axios';
 import { config } from 'dotenv';
 config();
@@ -68,6 +70,7 @@ export const getAllJobPostings = async () => {
         const jobSearchUrl = company.jobSearchUrl;
 
         console.log('Company Name:', companyName);
+        logger.info(`Company Name: ${companyName}`);
 
         // fetch the company jobs
         let response = await fetchJobs(companyName, url, jobSearchUrl);
@@ -77,6 +80,7 @@ export const getAllJobPostings = async () => {
     await Promise.all(getALlJobs);
 
     console.log('All companies:', allJobPostings.length);
+    logger.info(`All companies: ${allJobPostings.length}`);
     return allJobPostings;
 }
 
@@ -113,6 +117,7 @@ export const filterOracleCloudJobs = async () => {
     );
     fileHandler.writeToExcel(filteredJobs, 'oracloud');
     console.log('Total Oracle Cloud Jobs:', filteredJobs.length);
+    logger.info(`Total Oracle Cloud Jobs: ${filteredJobs.length}`);
     return filteredJobs;
 
 }
