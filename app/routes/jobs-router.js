@@ -16,6 +16,8 @@ router.route('/workday')
         .get(jobsController.getWorkday);
 router.route('/dice')
         .get(jobsController.getDice);
+router.route('/oracloud')
+        .get(jobsController.getOraCloud);
 
 
 export default router;
