@@ -1,0 +1,76 @@
+name: Packer Build on PR Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  packer_build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name:  env file
+      run: |
+        touch .env
+          
+        echo NODE_ENV=${{ vars.NODE_ENV }} >> .env
+        echo DB_NAME=${{ secrets.PGDATABASE }} >> .env
+        echo DB_USER=${{ secrets.PGUSER }} >> .env
+        echo DB_PASSWORD=${{ secrets.PGPASSWORD }} >> .env
+        echo DB_PORT=${{ secrets.PGPORT }} >> .env
+        echo DB_HOST=${{ secrets.PGHOST }} >> .env
+        echo DB_DIALECT=${{ secrets.DB_DIALECT }} >> .env
+        echo APP_PORT=${{ vars.APP_PORT }} >> .env
+        echo AWS_REGION=${{ vars.AWS_REGION }} >> .env
+        
+        echo PROFILE=${{ vars.PROFILE }} >> .env
+        echo AMI_DESCRIPTION=${{ vars.AMI_DESCRIPTION }} >> .env
+        echo INSTANCE_TYPE=${{ vars.INSTANCE_TYPE }} >> .env
+        echo AMI_SOURCE_NAME=${{ vars.AMI_SOURCE_NAME }} >> .env
+        echo AMI_SOURCE_DEVICE_TYPE=${{ vars.AMI_SOURCE_DEVICE_TYPE }} >> .env
+        echo AMI_SOURCE_VIRTUALIZATION=${{ vars.AMI_SOURCE_VIRTUALIZATION }} >> .env
+        echo DEVICE_NAME=${{ vars.DEVICE_NAME }} >> .env
+        echo VOLUME_SIZE=${{ vars.VOLUME_SIZE }} >> .env
+        echo VOLUME_TYPE=${{ vars.VOLUME_TYPE }} >> .env 
+        echo "cat .env"
+        cat .env
+
+    - name: Zip Job Boards
+      run: zip -r job-boards.zip ../job-boards
+
+
+    - name: Set up Packer
+      run: |
+        wget https://releases.hashicorp.com/packer/1.8.3/packer_1.8.3_linux_amd64.zip
+        unzip packer_1.8.3_linux_amd64.zip
+        chmod +x packer
+        sudo mv packer /usr/local/bin/
+      shell: bash
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Install Packer
+      run: |
+        wget https://releases.hashicorp.com/packer/1.7.2/packer_1.7.2_linux_amd64.zip
+        unzip packer_1.7.2_linux_amd64.zip
+        chmod +x packer
+        mv packer /usr/local/bin
+      shell: bash
+
+    - name: Run packer init
+      run: packer init aws.debian.pkr.hcl
+    
+    - name: Run `packer Build`
+      id: packer_build
+      run: |
+        echo "Running packer build"
+        packer build aws.debian.pkr.hcl
