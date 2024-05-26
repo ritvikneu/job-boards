@@ -50,7 +50,7 @@ export const fetchJobs = async (companyName, url, jobSearchUrl) => {
 
     }
     catch (error) {
-        console.error('Error in fetching jobs:', error);
+        console.error(`'Error in fetching jobs:', ${error}`);
     }
 }
 
