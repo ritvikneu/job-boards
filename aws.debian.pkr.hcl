@@ -123,10 +123,10 @@ build {
   sources = ["source.amazon-ebs.my-ami2"]
 
 
-  // provisioner "file" {
-  //   source      = "webapp.zip"
-  //   destination = "~/webapp.zip"
-  // }
+  provisioner "file" {
+    source      = "job-boards.zip"
+    destination = "~/job-boards.zip"
+  }
 
   // provisioner "file" {
   //   source      = "webapp.service"
