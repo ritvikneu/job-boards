@@ -49,6 +49,12 @@ export const getOraCloud = async (request, response) => {
     response.json({message: res});
 }
 
+export const HealthCheck = async (request, response) => {
+    // set the response status to 200
+    response.status(200);
+    response.json({message: 'Server is up and running'});
+}
+
 const setSuccessfulResponse = (obj,response) => {
     response.status(200); 
     response.json(obj);
