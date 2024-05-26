@@ -18,6 +18,8 @@ router.route('/dice')
         .get(jobsController.getDice);
 router.route('/oracloud')
         .get(jobsController.getOraCloud);
+router.route('/health')
+        .get(jobsController.HealthCheck);
 
 
 export default router;
