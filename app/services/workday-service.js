@@ -1,5 +1,6 @@
 import { parse } from "dotenv";
 
+import { logger } from '../middleware/logger.js';
 import { readFileSync } from 'fs';
 
 import { FileHandler } from './file_creation-service.js';
@@ -45,7 +46,7 @@ export const workdayFetch = async (url, offset, companyName) => {
         }
         return data.jobPostings;
     } catch (error) {
-        console.error('Error in fetching jobs:', error);
+        logger.error(`'Error in fetching jobs:', ${error}`);
     }
 }
 
@@ -60,13 +61,13 @@ export const workdayJobFetch = async (url) => {
         const jobData = await response.json();
         return jobData.jobPostingInfo;
     } catch (error) {
-        console.log('Error fetching single job:', url);
+        logger.error(`'Error fetching single job:' ${url}`);
         // throw error; // Throw the error so it can be caught in the calling function
     }
 }
 
 export const getAllCompanies = async () => {
-    console.log("inside get all workday companies");
+    logger.info("inside get all workday companies");
     const company_set = new Set();
     const csvFile = `app/companies/workday/${fileName}.csv`;
     let company_list = [];
@@ -92,7 +93,7 @@ export const getAllCompanies = async () => {
             }
         }
         catch (error) {
-            console.log("Error in parsing company names");
+            logger.error("Error in parsing company names");
         }
     });
     return company_list;
@@ -112,7 +113,7 @@ export const getWorkdayJobs = async (company_list) => {
                 jobPostings.push(...response);
             }
             catch (error) {
-                console.log(`Error in pushing job data ${companyName} to jobPostings array`);
+                logger.error(`Error in pushing job data ${companyName} to jobPostings array`);
             }
             offset += 20;
         }
@@ -149,7 +150,7 @@ export const getWorkdayJobs = async (company_list) => {
             // allJobData.push(data);
         }
         catch (error) {
-            console.log("Error fetching job data", job_URL);
+            logger.error(`"Error fetching job data", ${job_URL}`);
         }
 
     }
@@ -159,7 +160,7 @@ export const getWorkdayJobs = async (company_list) => {
 }
 
 export const workdayJobsNoFilter = async () => {
-    console.log("inside workday call");
+    logger.info("inside workday call");
     const company_list = await getAllCompanies();
     const workdayListInfo = await getWorkdayJobs(company_list);
 
@@ -169,12 +170,12 @@ export const workdayJobsNoFilter = async () => {
 }
 
 export const filterWorkDayJobs = async () => {
-    console.log("inside filter workday jobs");
+    logger.info("inside filter workday jobs");
     const workday_list = await workdayJobsNoFilter();
     const filtered_workday_list = [];
 
     const jobPosting = workday_list.map(async job => {
-        // console.log("inside jobPosting");
+        // logger.info("inside jobPosting");
         let country_check = job["location"].toLowerCase();
         const location_matched = await locationChecker.isCountryPresentWorkday(country_check);
 
@@ -182,9 +183,9 @@ export const filterWorkDayJobs = async () => {
             let posting_date = job["posting_date"];
             if (posting_date && await filterJob.postingDateChecker(posting_date)) {
                 let title_to_check = job["job_title"].toLowerCase();
-                // console.log("title_to_check", title_to_check);
+                // logger.info("title_to_check", title_to_check);
                 const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
-                // console.log("title_matched", title_matched);
+                // logger.info("title_matched", title_matched);
                 if (title_matched) {
                     return job; // Keep the job if it matches all criteria
                 }
@@ -212,6 +213,6 @@ export const filterWorkDayJobs = async () => {
 
 
 export const getFilteredWorkDayJobs = async () => {
-    console.log("inside get filtered workday jobs");
+    logger.info("inside get filtered workday jobs");
     const workday_list = await filterWorkDayJobs();
 }
