@@ -3,7 +3,8 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import { config } from 'dotenv';
 // import { send } from 'process';
-import { sendMail } from './mail-service.js';
+import { sendMail, sendMailAttachment } from './mail-service.js';
+// import { sendMail } from '../data/';
 config();
 
 
@@ -57,6 +58,7 @@ class FileHandler {
 
             console.log('Excel file saved:----------------', listing);
             printSuccessMessage(listing);
+            sendMailAttachment(listing, `Please find the attached Excel file with the job listings`, excelFilePath, excelFileName);
         } catch (err) {
             console.log("Error occurred while saving Excel file:", err);
         }
