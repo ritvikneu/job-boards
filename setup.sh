@@ -50,6 +50,17 @@ sudo unzip job-boards.zip
 echo "----Checking if the file exists----"
 ls 
 
+
+echo "+-------------------------------------------------------------+"
+echo "|                                                             |"
+echo "|                    Install Node Modules                     |"
+echo "|                                                             |"
+echo "+-------------------------------------------------------------+"
+echo "cd to job-boards to install node modules"
+cd /opt/boarduser/job-boards
+sudo npm install
+
+
 echo "+-------------------------------------------------------------+"
 echo "|                                                             |"
 echo "|                    setup new user permissions               |"
@@ -69,15 +80,6 @@ sudo chmod -R 750  /opt/boarduser/job-boards
 echo "display permissions of user directory"
 ls -la /opt/boarduser
 
-
-echo "+-------------------------------------------------------------+"
-echo "|                                                             |"
-echo "|                    Install Node Modules                     |"
-echo "|                                                             |"
-echo "+-------------------------------------------------------------+"
-echo "cd to job-boards to install node modules"
-cd /opt/boarduser/job-boards
-sudo npm install
 
 
 
