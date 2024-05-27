@@ -76,7 +76,7 @@ echo "|                    Install Node Modules                     |"
 echo "|                                                             |"
 echo "+-------------------------------------------------------------+"
 echo "cd to job-boards to install node modules"
-cd job-boards
+cd /opt/boarduser/job-boards
 sudo npm install
 
 
