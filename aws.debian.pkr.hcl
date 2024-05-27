@@ -138,11 +138,11 @@ build {
   //   destination = "~/cloudwatch-config.json"
   // }
 
-  // provisioner "shell" {
-  //   scripts = [
-  //     "./setup.sh",
-  //   ]
-  // }
+  provisioner "shell" {
+    scripts = [
+      "./setup.sh",
+    ]
+  }
 
   // provisioner "shell" {
   //   scripts = [
