@@ -1,4 +1,4 @@
-name: Packer Build on PR Merge
+name: Packer Build - AMI Creation on AWS
 
 on:
   push:
