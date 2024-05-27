@@ -7,10 +7,10 @@ const TOKEN = "6ea8a4c56498dc3fff42c01a3f1de90f";
 const ENDPOINT = "https://send.api.mailtrap.io/";
 
 
-const filePath = "/Users/ritvikparamkusham/Downloads/Projects/job-boards/app/data/Jobs_May23.xlsx";
-const fileName = "Jobs_May23.xlsx";
+// const filePath = "/Users/ritvikparamkusham/Downloads/Projects/job-boards/app/data/Jobs_May23.xlsx";
+// const fileName = "Jobs_May23.xlsx";
 
-export const sendMailAttachment = (subject, content) => {
+export const sendMailAttachment = (subject, content,filePath,fileName) => {
   const client = new MailtrapClient({ endpoint: ENDPOINT, token: TOKEN });
 
   const sender = {

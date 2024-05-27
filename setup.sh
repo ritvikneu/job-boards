@@ -19,8 +19,11 @@ echo "|                                                             |"
 echo "|                    Setup boarduser                         |"
 echo "|                                                             |"
 echo "+-------------------------------------------------------------+"
+echo "create a group and user for boarduser"
 sudo groupadd boardsgroup
+echo "create a user boarduser and setup home directory in /opt/boarduser"
 sudo useradd -s /bin/false -g boardsgroup -d /opt/boarduser -m boarduser
+
 
 
 
@@ -36,15 +39,35 @@ sudo apt install unzip
 echo "check job-boards in home directory"
 ls
 echo "cp job-boards to user home directory"
-sudo cp -r  job-boards.zip /opt/job-boards
+sudo cp -r  job-boards.zip /opt/boarduser
 
-cd /opt/job-boards
+
+cd /opt/boarduser
 
 echo "unzip in opt/job-boa"
 sudo unzip job-boards.zip
 
 echo "----Checking if the file exists----"
 ls 
+
+echo "+-------------------------------------------------------------+"
+echo "|                                                             |"
+echo "|                    setup new user permissions               |"
+echo "|                                                             |"
+echo "+-------------------------------------------------------------+"
+
+echo "get the home directory of user"
+echo ~boarduser
+# sudo -u boarduser bash
+echo "display permissions of user directory"
+ls -la /opt/boarduser
+
+echo "change permissions of job-boards"
+sudo chown -R boarduser:boardsgroup /opt/boarduser/job-boards
+sudo chmod -R 750  /opt/boarduser/job-boards
+
+echo "display permissions of user directory"
+ls -la /opt/boarduser
 
 
 echo "+-------------------------------------------------------------+"
