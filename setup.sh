@@ -65,8 +65,7 @@ echo "|                                                             |"
 echo "|                    Setup webapp.service                     |"
 echo "|                                                             |"
 echo "+-------------------------------------------------------------+"
-echo "cd to /lib/systemd/system"
-cd
+echo "cp job-boards.service to /lib/systemd/system"
 sudo cp -r job-boards.service /lib/systemd/system
 
 
