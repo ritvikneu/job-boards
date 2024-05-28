@@ -1,0 +1,16 @@
+[Unit]
+Description=systemd
+Documentation=https://example.com
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/boarduser/job-boards
+EnvironmentFile=/opt/boarduser/job-boards/.env
+Type=simple
+User=boarduser
+ExecStart=/usr/bin/node /opt/boarduser/job-boards/server.js
+Restart=always
+
+[Install]
+WantedBy=cloud-init.target
+
