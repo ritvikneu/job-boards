@@ -1,7 +1,7 @@
-name: Packer Build - AMI Creation on AWS
+name: Packer Build - AMI Creation on AWS EC2
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
