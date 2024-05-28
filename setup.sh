@@ -60,25 +60,35 @@ echo "cd to job-boards to install node modules"
 cd /opt/boarduser/job-boards
 sudo npm install
 
-
 echo "+-------------------------------------------------------------+"
 echo "|                                                             |"
-echo "|                    setup new user permissions               |"
+echo "|                    Setup webapp.service                     |"
 echo "|                                                             |"
 echo "+-------------------------------------------------------------+"
+echo "cd to /lib/systemd/system"
+cd
+sudo cp -r job-boards.service /lib/systemd/system
 
-echo "get the home directory of user"
-echo ~boarduser
-# sudo -u boarduser bash
-echo "display permissions of user directory"
-ls -la /opt/boarduser
 
-echo "change permissions of job-boards"
-sudo chown -R boarduser:boardsgroup /opt/boarduser/job-boards
-sudo chmod -R 750  /opt/boarduser/job-boards
 
-echo "display permissions of user directory"
-ls -la /opt/boarduser
+# echo "+-------------------------------------------------------------+"
+# echo "|                                                             |"
+# echo "|                    setup new user permissions               |"
+# echo "|                                                             |"
+# echo "+-------------------------------------------------------------+"
+
+# echo "get the home directory of user"
+# echo ~boarduser
+# # sudo -u boarduser bash
+# echo "display permissions of user directory"
+# ls -la /opt/boarduser
+
+# echo "change permissions of job-boards"
+# sudo chown -R boarduser:boardsgroup /opt/boarduser/job-boards
+# sudo chmod -R 750  /opt/boarduser/job-boards
+
+# echo "display permissions of user directory"
+# ls -la /opt/boarduser
 
 
 
