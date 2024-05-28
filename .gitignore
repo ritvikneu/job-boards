@@ -6,3 +6,8 @@ data
 structures
 .DS_Store
 logs
+IAC
+.terraform
+.terraform.lock.hcl
+.terraform.lock.hcl.backup
+.terraform.*
