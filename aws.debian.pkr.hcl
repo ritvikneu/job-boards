@@ -144,11 +144,11 @@ build {
     ]
   }
 
-  // provisioner "shell" {
-  //   scripts = [
-  //     "./systemD.sh",
-  //   ]
-  // }
+  provisioner "shell" {
+    scripts = [
+      "./systemD.sh",
+    ]
+  }
 
   post-processor "manifest" {
     output     = "manifest.json"
