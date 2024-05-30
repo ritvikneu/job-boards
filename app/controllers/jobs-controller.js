@@ -7,6 +7,8 @@ import * as leverService from "../services/lever-service.js";
 import * as workdayService from "../services/workday-service.js";
 import * as diceService from "../services/dice-service.js";
 import * as oraCloudService from "../services/oraclecloud-service.js";
+import { sendMailAttachment } from '../services/mail-service.js';
+import { FileHandler } from '../services/file_creation-service.js';
 
 export const get = async (request, response) => {
     // try {
@@ -47,6 +49,12 @@ export const getDice = async (request, response) => {
 export const getOraCloud = async (request, response) => { 
     const res = await oraCloudService.filterOracleCloudJobs();;
     response.json({message: res});
+}
+
+export const getLatestJobs = async (request, response) => {
+    const fileHandler =  new FileHandler()
+    fileHandler.getLatestJobs();
+    response.json({message: 'Check your mail for the latest jobs'});
 }
 
 export const HealthCheck = async (request, response) => {

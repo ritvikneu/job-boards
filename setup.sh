@@ -24,10 +24,6 @@ sudo groupadd boardsgroup
 echo "create a user boarduser and setup home directory in /opt/boarduser"
 sudo useradd -s /bin/false -g boardsgroup -d /opt/boarduser -m boarduser
 
-
-
-
-
 echo "+-------------------------------------------------------------+"
 echo "|                                                             |"
 echo "|                    UNZIP job-boards                             |"

@@ -18,6 +18,8 @@ router.route('/dice')
         .get(jobsController.getDice);
 router.route('/oracloud')
         .get(jobsController.getOraCloud);
+router.route('/latest')
+        .get(jobsController.getLatestJobs);
 router.route('/health')
         .get(jobsController.HealthCheck);
 

@@ -37,7 +37,7 @@ route(app);
 
 // // Dice Jobs
 // // to run the dice jobs
-diceService.filterDiceJobs();
+// diceService.filterDiceJobs();
 
 // const job_link = 'https://www.dice.com/job-detail/04beaa5b-2778-4f51-b14a-afee043489f3'
 // diceService.getJobPositionId(job_link);

@@ -58,10 +58,16 @@ class FileHandler {
 
             console.log('Excel file saved:----------------', listing);
             printSuccessMessage(listing);
-            sendMailAttachment(listing, `Please find the attached Excel file with the job listings`, excelFilePath, excelFileName);
+            // sendMailAttachment(listing, `Please find the attached Excel file with the job listings`, excelFilePath, excelFileName);
         } catch (err) {
             console.log("Error occurred while saving Excel file:", err);
         }
+    }
+
+    getLatestJobs() {
+        const excelFileName = `${this.excelFileName}`;
+        const excelFilePath = path.join(process.cwd(), 'app', 'data', excelFileName);
+        sendMailAttachment('Latest Jobs file', `Please find the attached Excel file with the job listings`, excelFilePath, excelFileName);
     }
 
     writeToCsv(data, listing) {
