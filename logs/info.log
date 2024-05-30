@@ -1,0 +1,99 @@
+{"level":"info","message":"Company Name: Goldman Sachs","timestamp":"2024-05-28 14:22:05"}
+{"level":"info","message":"Company Name: JPMC","timestamp":"2024-05-28 14:22:05"}
+{"level":"info","message":"Company Name: Ford","timestamp":"2024-05-28 14:22:05"}
+{"level":"info","message":"Company Name: Goldman Sachs","timestamp":"2024-05-28 14:23:14"}
+{"level":"info","message":"Company Name: JPMC","timestamp":"2024-05-28 14:23:14"}
+{"level":"info","message":"Company Name: Ford","timestamp":"2024-05-28 14:23:14"}
+{"level":"info","message":"inside filter workday jobs","timestamp":"2024-05-28 14:23:28"}
+{"level":"info","message":"inside workday call","timestamp":"2024-05-28 14:23:28"}
+{"level":"info","message":"inside get all workday companies","timestamp":"2024-05-28 14:23:28"}
+{"level":"info","message":"All companies: 439","timestamp":"2024-05-28 14:23:28"}
+{"level":"info","message":"Total Oracle Cloud Jobs: 33","timestamp":"2024-05-28 14:23:28"}
+{"level":"error","message":"'Error fetching single job:' https://modernatx.wd1.myworkdayjobs.com/wday/cxs/modernatx/m_txundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://modernatx.wd1.myworkdayjobs.com/wday/cxs/modernatx/m_txundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://walmart.wd5.myworkdayjobs.com/wday/cxs/walmart/walmartexternalundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://walmart.wd5.myworkdayjobs.com/wday/cxs/walmart/walmartexternalundefined","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"\"Error fetching job data\", https://rb.wd5.myworkdayjobs.com/wday/cxs/rb/frs/job/East-Rutherford-NJ/Currency-Operations-Supervisor_R-0000023275-1","timestamp":"2024-05-28 14:26:59"}
+{"level":"error","message":"'Error fetching single job:' https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:27:01"}
+{"level":"error","message":"\"Error fetching job data\", https://wd1.myworkdaysite.com/wday/cxs/fmr/fidelitycareersundefined","timestamp":"2024-05-28 14:27:01"}
+{"level":"error","message":"'Error fetching single job:' https://philips.wd3.myworkdayjobs.com/wday/cxs/philips/jobs-and-careersundefined","timestamp":"2024-05-28 14:27:01"}
+{"level":"error","message":"\"Error fetching job data\", https://philips.wd3.myworkdayjobs.com/wday/cxs/philips/jobs-and-careersundefined","timestamp":"2024-05-28 14:27:01"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"error","message":"\"Error fetching job data\", https://vertexinc.wd1.myworkdayjobs.com/wday/cxs/vertexinc/vertexinc/job/Software-Architect-III--Cloud--Remote---US-_JR100796","timestamp":"2024-05-28 14:27:02"}
+{"level":"info","message":"inside filter workday jobs","timestamp":"2024-05-28 23:48:24"}
+{"level":"info","message":"inside workday call","timestamp":"2024-05-28 23:48:24"}
+{"level":"info","message":"inside get all workday companies","timestamp":"2024-05-28 23:48:24"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"'Error fetching single job:' https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://bah.wd1.myworkdayjobs.com/wday/cxs/bah/bah_jobsundefined","timestamp":"2024-05-28 23:50:41"}
+{"level":"error","message":"\"Error fetching job data\", https://entegris.wd1.myworkdayjobs.com/wday/cxs/entegris/entegriscareers/job/Register-in-Candidate-Pool_REQ-5652","timestamp":"2024-05-28 23:50:46"}
+{"level":"error","message":"\"Error fetching job data\", https://forcepoint.wd1.myworkdayjobs.com/wday/cxs/forcepoint/engineering-external-careers1/job/Senior-QA-Automation-Engineer--Automation-Testing--Team-Management--Performance-Testing-_JR465743-1","timestamp":"2024-05-28 23:50:46"}
+{"level":"error","message":"\"Error fetching job data\", https://hmhw.wd12.myworkdayjobs.com/wday/cxs/hmhw/hmh_careers/job/Lead-Field-Services-Technician-Subsea-Engineer-Offshore_JR100387-1","timestamp":"2024-05-28 23:50:46"}
+{"level":"info","message":"inside filter workday jobs","timestamp":"2024-05-29 00:35:51"}
+{"level":"info","message":"inside workday call","timestamp":"2024-05-29 00:35:51"}
+{"level":"info","message":"inside get all workday companies","timestamp":"2024-05-29 00:35:51"}
+{"level":"error","message":"'Error fetching single job:' https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/ext/job/Omaha-Nebraska/Director-Client-Relationship-Executive_R-10335416-1","timestamp":"2024-05-29 00:35:56"}
+{"level":"error","message":"\"Error fetching job data\", https://fiserv.wd5.myworkdayjobs.com/wday/cxs/fiserv/ext/job/Omaha-Nebraska/Director-Client-Relationship-Executive_R-10335416-1","timestamp":"2024-05-29 00:35:56"}
+{"level":"info","message":"inside filter workday jobs","timestamp":"2024-05-29 00:36:28"}
+{"level":"info","message":"inside workday call","timestamp":"2024-05-29 00:36:28"}
+{"level":"info","message":"inside get all workday companies","timestamp":"2024-05-29 00:36:28"}
+{"level":"info","message":"inside filter workday jobs","timestamp":"2024-05-29 00:38:38"}
+{"level":"info","message":"inside workday call","timestamp":"2024-05-29 00:38:38"}
+{"level":"info","message":"inside get all workday companies","timestamp":"2024-05-29 00:38:38"}
