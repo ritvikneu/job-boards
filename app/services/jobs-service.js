@@ -4,6 +4,7 @@ import axios from 'axios';
 import jsdom from 'jsdom';
 import { writeToCsv, writeToCsvCompanyNames, writeToExcel } from './file_creation-service.js';
 
+
 class Portal {
     constructor(portalURL, csvFile, portalName) {
         this.portalURL = portalURL;

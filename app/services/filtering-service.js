@@ -106,10 +106,11 @@ class FilterJobs {
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
-        
-        if (validParts.length === 0 || validParts.length>20) return false;
 
-        for (let r = 0; r <= validParts.length; r++) {
+
+        if (validParts.length === 0 || validParts.length > 20) return false;
+
+        for (let r = 0; r <= 2; r++) {
             for (let combo of await this.getCombinations(validParts, r)) {
                 let searchWord = combo.join(' ');
                 // let searchWordLen = searchWord.length;
@@ -156,4 +157,7 @@ const locationChecker = new LocationChecker();
 const filterJob = new FilterJobs();
 
 export { titleChecker, locationChecker, filterJob };
-export {TitleChecker, LocationChecker, FilterJobs}
+export { TitleChecker, LocationChecker, FilterJobs }
+
+
+

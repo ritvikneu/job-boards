@@ -51,7 +51,7 @@ async function getDiceJobs(queryParams) {
 // Call the function to get the Dice jobs
 export const diceJobsFetch = async () => {
     const queryParams = {
-        page: 2,
+        page: 1,
         pageSize: 1000,
         facets: ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
         'filters.employmentType': 'FULLTIME',
@@ -61,7 +61,7 @@ export const diceJobsFetch = async () => {
         // fields: [
         //     'id', 'jobId', 'guid', 'summary', 'title', 'postedDate', 'modifiedDate', 'jobLocation.displayName'
         // ],
-        q: 'software'
+        q: 'intern'
     };
     try {
         const diceJobs = await getDiceJobs(queryParams);
@@ -94,7 +94,7 @@ export const filterDiceJobs = async () => {
             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
             if (title_matched) {
                 // console.log("title:", title_to_check);
-                data["postion_id"] = await getJobPositionId(data["job_link"]);
+                data["position_id"] = await getJobPositionId(data["job_link"]);
                 if (!job_links_seen.has(data["job_link"])) {
                     job_links_seen.add(data["job_link"]);
                     filteredJobs.push(data);
@@ -110,7 +110,7 @@ export const filterDiceJobs = async () => {
     filteredJobs.sort((a, b) => {
         return a.company_name.localeCompare(b.company_name);
     });
-    fileHandler.writeToExcel(filteredJobs, 'dice2');
+    fileHandler.writeToExcel(filteredJobs, 'dice');
     return filteredJobs;
     // writeToExcel(filteredJobs, 'dice');
     // console.log("filterDiceJobs", filterDiceJobs);

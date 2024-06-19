@@ -10,6 +10,9 @@ import * as oraCloudService from "../services/oraclecloud-service.js";
 import { sendMailAttachment } from '../services/mail-service.js';
 import { FileHandler } from '../services/file_creation-service.js';
 
+import { config } from 'dotenv';
+config();
+
 export const get = async (request, response) => {
     // try {
         const csvFile = 'greenhouse.csv';
@@ -60,7 +63,7 @@ export const getLatestJobs = async (request, response) => {
 export const HealthCheck = async (request, response) => {
     // set the response status to 200
     response.status(200);
-    response.json({message: 'Server is up and running'});
+    response.json({message: process.env.HEALTH_CHECK});
 }
 
 const setSuccessfulResponse = (obj,response) => {
