@@ -82,8 +82,9 @@ export const getGreenHouseJobs = async () => {
 
                             data["company_name"] = company.name
                             data["job_title"] = link.innerHTML
-                            let job_id = link.getAttribute('href').split('?gh_jid=')[1];
-                            data["job_link"] = GH_URL + "/"+ data["company_name"]+ "/jobs/" + job_id
+                            let position_id = link.getAttribute('href').split('?gh_jid=')[1];
+                            data["job_link"] = GH_URL + "/"+ data["company_name"]+ "/jobs/" + position_id,
+                            data["position_id"] = position_id
 
                         });
                         opening.querySelectorAll('span.location').forEach(async location => {

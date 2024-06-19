@@ -115,7 +115,7 @@ export const filterOracleCloudJobs = async () => {
         return new Date(b.posting_date) - new Date(a.posting_date);
     }
     );
-    fileHandler.writeToExcel(filteredJobs, 'oracloud');
+    fileHandler.writeToExcel(filteredJobs, fileName);
     console.log('Total Oracle Cloud Jobs:', filteredJobs.length);
     logger.info(`Total Oracle Cloud Jobs: ${filteredJobs.length}`);
     return filteredJobs;

@@ -111,5 +111,10 @@ sudo cp -r job-boards.service /lib/systemd/system
 # echo "install Docker"
 # apt-cache policy docker-ce -y
 
-# echo "install Docker"
+# echo "install Docker" 
 # sudo apt install docker-ce -y
+
+# building docker image
+# docker build -t ritvikdocker/jb:2.0 .
+# running docker container
+# docker run -d --name=jobs -p 8080:7777 ritvikdocker/jb:2.0
