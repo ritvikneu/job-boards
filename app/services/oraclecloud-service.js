@@ -73,8 +73,13 @@ export const getAllJobPostings = async () => {
         logger.info(`Company Name: ${companyName}`);
 
         // fetch the company jobs
-        let response = await fetchJobs(companyName, url, jobSearchUrl);
-        allJobPostings.push(...response);
+        try {
+            let response = await fetchJobs(companyName, url, jobSearchUrl);
+            allJobPostings.push(...response);
+        } catch (error) {
+            console.log("Error in fetching jobs:",companyName, error);
+            
+        }
     });
 
     await Promise.all(getALlJobs);

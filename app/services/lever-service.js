@@ -47,7 +47,9 @@ export const getAllCompanies = async () => {
             }
         }
     });
-    // writeToCsvCompanyNames(csvCompanyNames, "lever");
+    // sort csvCompanyNames
+
+    // fileHandler.writeToCsvCompanyNames(csvCompanyNames.sort(), "lever");
     // process.exit();
     return company_list;
 }
