@@ -3,16 +3,18 @@ import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 import { config } from 'dotenv';
+import pLimit from 'p-limit';
 config();
 
 import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
 import { FilterJobs } from './filtering-service.js';
+import { logger } from '../middleware/logger.js';
 const filterJob = new FilterJobs();
 
 const fileName = process.env.FILE_GH
-
+const CONCURRENCY_LIMIT = 300; // Number of concurrent requests
 export const getAllCompanies = async () => {
     console.log("inside get all companies");
 
@@ -23,6 +25,7 @@ export const getAllCompanies = async () => {
     const company_set = new Set();
     const csvFile = `app/companies/greenhouse/${fileName}.csv`;
     let company_list = [];
+    const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n');
     // console.log(rows);
@@ -36,6 +39,7 @@ export const getAllCompanies = async () => {
             if (company.length > 0) {
                 if (!company_set.has(companyName)) {
                     // write all the compnies to a csv file
+                    csvCompanyNames.push(company[0]);
                     company_set.add(companyName);
                     company_list.push({
                         name: companyName,
@@ -46,181 +50,99 @@ export const getAllCompanies = async () => {
         }
     });
 
-    // writeToCsvCompanyNames(company_set, "g-test");
+    // fileHandler.writeToCsvCompanyNames(csvCompanyNames.sort(), "g-test");
     // process.exit();
     return company_list;
-}
-
-export const getGreenHouseJobs = async () => {
-    console.log("inside get greenhouse jobs");
-    const GH_URL = "https://boards.greenhouse.io"
-
-    const company_list = await getAllCompanies();
-    let job_links_seen = new Set();
-    // create a list of greenhouse companies intialize to empty
-    let greenhouse_list = [];
-    const company_set = new Set();
-
-    for (let i = 0; i < company_list.length; i++) {
-        let company = company_list[i];
-        // console.log(company)
-        let response = null;
-        try {
-            // console.log(" LINK  ", company.link)
-            response = await axios.get(company.link);
-            const headers = response.headers;
-
-            // Calculate the size of the headers in bytes
-            const headerSize = JSON.stringify(headers).length;
-            // console.log(company.name + " success" + response.status + " " + headerSize)
-            if (response.status == 200) {
-                // clearConsole();
-                const htmlDom = new jsdom.JSDOM(response.data);
-                htmlDom.window.document.querySelectorAll('section').forEach(async section => {
-                    section.querySelectorAll('div.opening').forEach(async opening => {
-                        let data = {}
-                        opening.querySelectorAll('a').forEach(async link => {
-
-                            let job_link = link.getAttribute('href')
-                            let position_id = job_link.split('/')[3]
-
-                            data["company_name"] = company.name
-                            data["job_title"] = link.innerHTML
-                            data["job_link"] = GH_URL + job_link
-                            data["position_id"] = position_id
-                        });
-                        opening.querySelectorAll('span.location').forEach(async location => {
-                            data["location"] = location.innerHTML
-
-                        })
-                        if (!job_links_seen.has(data["job_link"])) {
-                            job_links_seen.add(data["job_link"]);
-                            greenhouse_list.push(data);
-                        }
-                    })
-                });
-                htmlDom.window.close()
-            }
-            else {
-                console.log("Errors --------------- ", company.name);
-            }
-        }
-        catch (err) {
-            console.log("Errors --------------- ", company.name);
-            response = null;
-        }
-
-    }
-
-    // writeToCsvCompanyNames(company_set, "g-test");
-    // process.exit();
-    return greenhouse_list;
-
 }
 
 export const getFilteredGreenHouseJobs = async () => {
     const startTimer = new Date();
     console.log("Start filtering greenhouse jobs:", startTimer);
     console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobsSeq();
+    const greenhouse_list = await filterGreenHouseJobs();
+    console.log("Filtering started for Greenhouse Jobs:", new Date());
     console.log("greenhouse_list");
     // writeToCsv(greenhouse_list, "greenhouse");
     // writeToExcel(greenhouse_list, fileName);
     fileHandler.writeToExcel(greenhouse_list, fileName);
-    console.log("Time taken to  filtering greenhouse jobs:", new Date() - startTimer);
+    console.log("Time taken to filter Lever Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
     return greenhouse_list;
 }
 
 
+const GH_URL = "https://boards.greenhouse.io";
+
+export const getGreenHouseJobs = async () => {
+    console.log("inside get greenhouse jobs");
+
+    const company_list = await getAllCompanies();
+    const job_links_seen = new Set();
+    const greenhouse_list = [];
+
+    const fetchJobs = async (company) => {
+        try {
+            const response = await axios.get(company.link);
+            if (response.status === 200) {
+                const htmlDom = new jsdom.JSDOM(response.data);
+                const jobs = htmlDom.window.document.querySelectorAll('section div.opening');
+                jobs.forEach(opening => {
+                    const data = {};
+                    const link = opening.querySelector('a');
+                    const location = opening.querySelector('span.location');
+
+                    if (link && location) {
+                        const job_link = link.getAttribute('href');
+                        const position_id = job_link.split('/')[3];
+
+                        data["company_name"] = company.name;
+                        data["job_title"] = link.innerHTML;
+                        data["job_link"] = GH_URL + job_link;
+                        data["position_id"] = position_id;
+                        data["location"] = location.innerHTML;
+
+                        if (!job_links_seen.has(data["job_link"])) {
+                            job_links_seen.add(data["job_link"]);
+                            greenhouse_list.push(data);
+                        }
+                    }
+                });
+                htmlDom.window.close();
+            } else {
+                console.log(`Error fetching jobs for ${company.name}`);
+                logger.error(`Error fetching jobs for ${company.name}`);
+            }
+        } catch (err) {
+            console.log(`Error fetching jobs for ${company.name}`);
+            logger.error(`Error fetching jobs for ${company.name}: ${err.message}`);
+        }
+    };
+
+    const fetchJobsPromises = company_list.map(company => fetchJobs(company));
+    await Promise.all(fetchJobsPromises);
+
+    // const fetchJobsBatched = async (companies) => {
+    //     const fetchJobsPromises = companies.map(company => limit(() => fetchJobs(company)));
+    //     await Promise.all(fetchJobsPromises);
+    // };
+
+    // // Process companies in batches
+    // const BATCH_SIZE = 50; // Adjust the batch size as needed
+    // for (let i = 0; i < company_list.length; i += BATCH_SIZE) {
+    //     const batch = company_list.slice(i, i + BATCH_SIZE);
+    //     await fetchJobsBatched(batch);
+    // }
+
+
+    return greenhouse_list;
+};
+
 export const filterGreenHouseJobs = async () => {
     console.log("inside filter greenhouse jobs");
     const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = {};
-
-    const filter_greenhouse = greenhouse_list.map(async data => {
-
-        let location_to_check = data["location"];
-        location_to_check = location_to_check.toLowerCase();
-        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
-
-        if (location_matched) {
-            let title_to_check = data["job_title"];
-            title_to_check = title_to_check.toLowerCase();
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-
-            let gh_job_link = data["job_link"];
-
-            if (title_matched) {
-                let posting_date = await getJobPostingDates(gh_job_link);
-                data["posting_date"] = posting_date;
-                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                    return data;
-                }
-            }
-        }
-        return null;
-    });
-
-    // Wait for all promises to resolve
-    // process the promises in sequence
-    const results = await Promise.all(filter_greenhouse);
-
-    // Filter out null values and add valid items to the filtered list
-    results.forEach(data => {
-        if (data !== null) {
-            filtered_greenhouse_list.push(data);
-        }
-    });
-
-    // sort the filtered list by posting date
-    filtered_greenhouse_list.sort((a, b) => {
-        return new Date(b.posting_date) - new Date(a.posting_date);
-    });
-
-    return filtered_greenhouse_list;
-}
-
-export const filterGreenHouseJobsBatch = async () => {
-    console.log("inside filter greenhouse jobs");
-    const greenhouse_list = await getGreenHouseJobs();
     const filtered_greenhouse_list = [];
-    // Define the batch size for processing
-    const batchSize = 100;
-    // Loop through the greenhouse_list in batches
-    for (let i = 0; i < greenhouse_list.length; i += batchSize) { 
-        const batch = greenhouse_list.slice(i, i + batchSize);
-        // Process each batch sequentially
-        for (const data of batch) {
-            let location_to_check = data["location"].toLowerCase();
-            const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+    const limit = pLimit(CONCURRENCY_LIMIT);
 
-            if (location_matched) {
-                let title_to_check = data["job_title"].toLowerCase();
-                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-
-                let gh_job_link = data["job_link"];
-
-                if (title_matched) {
-                    let posting_date = await getJobPostingDates(gh_job_link);
-                    data["posting_date"] = posting_date;
-                    if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                        filtered_greenhouse_list.push(data);
-                    }
-                }
-            }
-        }
-    }
-
-    return filtered_greenhouse_list;
-}
-
-export const filterGreenHouseJobsSeq = async () => {
-    const greenhouse_list = await getGreenHouseJobs();
-    const filtered_greenhouse_list = [];
-    console.log("inside filter greenhouse jobs");
-
-    // Loop through each data item sequentially
-    for (let data of greenhouse_list) {
+    const filterJobData = async (data) => {
         let location_to_check = data["location"].toLowerCase();
         const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
 
@@ -228,24 +150,32 @@ export const filterGreenHouseJobsSeq = async () => {
             let title_to_check = data["job_title"].toLowerCase();
             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
 
-            let gh_job_link = data["job_link"];
-
             if (title_matched) {
-                let posting_date = await getJobPostingDates(gh_job_link);
+                let posting_date = await getJobPostingDates(data["job_link"]);
                 data["posting_date"] = posting_date;
                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                    console.log(data["position_id"])
-                    filtered_greenhouse_list.push(data);
+                    return data;
                 }
             }
         }
+        return null;
+    };
 
-        // Release memory associated with the resolved promise
-        data = null;
+    const filterJobsBatched = async (jobs) => {
+        const filterPromises = jobs.map(job => limit(() => filterJobData(job)));
+        return await Promise.all(filterPromises);
+    };
+
+    for (let i = 0; i < greenhouse_list.length; i += CONCURRENCY_LIMIT) {
+        const batch = greenhouse_list.slice(i, i + CONCURRENCY_LIMIT);
+        const batchResults = await filterJobsBatched(batch);
+        filtered_greenhouse_list.push(...batchResults.filter(job => job !== null));
     }
 
+    filtered_greenhouse_list.sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+    
     return filtered_greenhouse_list;
-}
+};
 
 export const getJobPostingDates = async (job_link) => {
     let response = null;
@@ -273,3 +203,4 @@ export const getJobPostingDates = async (job_link) => {
         response = null;
     }
 }
+

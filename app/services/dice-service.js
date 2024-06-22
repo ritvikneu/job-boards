@@ -61,7 +61,7 @@ export const diceJobsFetch = async () => {
         // fields: [
         //     'id', 'jobId', 'guid', 'summary', 'title', 'postedDate', 'modifiedDate', 'jobLocation.displayName'
         // ],
-        q: 'intern'
+        q: 'software'
     };
     try {
         const diceJobs = await getDiceJobs(queryParams);
