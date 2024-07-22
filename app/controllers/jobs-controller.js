@@ -5,6 +5,7 @@ import * as ghService from "../services/greenhouse-service.js";
 import * as ghEmbedService from "../services/greenEmbed-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as workdayService from "../services/workday-service.js";
+import * as wday from "../services/wday-rabbit.js";
 import * as diceService from "../services/dice-service.js";
 import * as oraCloudService from "../services/oraclecloud-service.js";
 import { sendMailAttachment } from '../services/mail-service.js';
@@ -29,6 +30,7 @@ export const getGreenhouse = async (request, response) => {
 
 export const getGreenhouseEmbed = async (request, response) => { 
     const res = await ghEmbedService.getFilteredGreenHouseJobs();
+    // const res = await ghService.getFilteredGreenHouseJobs(true);
     response.json({message: res});
 }
 
@@ -38,7 +40,8 @@ export const getLever = async (request, response) => {
 }
 
 export const getWorkday = async (request, response) => { 
-    const res = await workdayService.filterWorkDayJobs();
+    // const res = await workdayService.filterWorkDayJobs();
+    const res = await wday.filterWorkDayJobs();
     response.json({message: res});
 }
 

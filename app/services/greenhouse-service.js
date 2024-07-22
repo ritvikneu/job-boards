@@ -13,13 +13,18 @@ import { FilterJobs } from './filtering-service.js';
 import { logger } from '../middleware/logger.js';
 const filterJob = new FilterJobs();
 
-const fileName = process.env.FILE_GH
+var fileName = process.env.FILE_GH
 const CONCURRENCY_LIMIT = 300; // Number of concurrent requests
-export const getAllCompanies = async () => {
+export const getAllCompanies = async (embed) => {
     console.log("inside get all companies");
+    if (embed) {
+        fileName = process.env.FILE_EMBED;
+    }
 
-    const greenUrl = "https://boards.greenhouse.io/";
-    const greenEmbedUrl = "https://boards.greenhouse.io/embed/job_board?for=";
+    let greenUrl = "https://boards.greenhouse.io/";
+    if (embed) {
+        greenUrl = "https://boards.greenhouse.io/embed/job_board?for=";
+    }
     // console.log("000000000000-0-----00--0980980809080",fileName)
     // const greenApis = new Set();
     const company_set = new Set();
@@ -55,27 +60,25 @@ export const getAllCompanies = async () => {
     return company_list;
 }
 
-export const getFilteredGreenHouseJobs = async () => {
+export const getFilteredGreenHouseJobs = async (embed) => {
     const startTimer = new Date();
     console.log("Start filtering greenhouse jobs:", startTimer);
     console.log("inside get filtered greenhouse jobs");
-    const greenhouse_list = await filterGreenHouseJobs();
+    const greenhouse_list = await filterGreenHouseJobs(embed);
     console.log("Filtering started for Greenhouse Jobs:", new Date());
     console.log("greenhouse_list");
-    // writeToCsv(greenhouse_list, "greenhouse");
-    // writeToExcel(greenhouse_list, fileName);
     fileHandler.writeToExcel(greenhouse_list, fileName);
-    console.log("Time taken to filter Lever Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
+    console.log("Time taken to filter Greenhouse Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
     return greenhouse_list;
 }
 
 
 const GH_URL = "https://boards.greenhouse.io";
 
-export const getGreenHouseJobs = async () => {
+export const getGreenHouseJobs = async (embed) => {
     console.log("inside get greenhouse jobs");
 
-    const company_list = await getAllCompanies();
+    const company_list = await getAllCompanies(embed);
     const job_links_seen = new Set();
     const greenhouse_list = [];
 
@@ -92,13 +95,25 @@ export const getGreenHouseJobs = async () => {
 
                     if (link && location) {
                         const job_link = link.getAttribute('href');
-                        const position_id = job_link.split('/')[3];
 
                         data["company_name"] = company.name;
+                        // console.log("company name", company.name);
                         data["job_title"] = link.innerHTML;
-                        data["job_link"] = GH_URL + job_link;
-                        data["position_id"] = position_id;
                         data["location"] = location.innerHTML;
+
+                        if (embed) {
+
+                            let position_id = link.getAttribute('href').split('?gh_jid=')[1];
+                            data["position_id"] = position_id;
+                            data["job_link"] = GH_URL + "/" + data["company_name"] + "/jobs/" + position_id;
+                                
+                        } else {
+
+                            let position_id = job_link.split('/')[3];
+                            data["position_id"] = position_id;
+                            data["job_link"] = GH_URL + job_link;
+                        }
+
 
                         if (!job_links_seen.has(data["job_link"])) {
                             job_links_seen.add(data["job_link"]);
@@ -113,7 +128,7 @@ export const getGreenHouseJobs = async () => {
             }
         } catch (err) {
             console.log(`Error fetching jobs for ${company.name}`);
-            logger.error(`Error fetching jobs for ${company.name}: ${err.message}`);
+            logger.error(`Error fetching jobs for ${company.name}`);
         }
     };
 
@@ -136,9 +151,9 @@ export const getGreenHouseJobs = async () => {
     return greenhouse_list;
 };
 
-export const filterGreenHouseJobs = async () => {
+export const filterGreenHouseJobs = async (embed) => {
     console.log("inside filter greenhouse jobs");
-    const greenhouse_list = await getGreenHouseJobs();
+    const greenhouse_list = await getGreenHouseJobs(embed);
     const filtered_greenhouse_list = [];
     const limit = pLimit(CONCURRENCY_LIMIT);
 
@@ -173,7 +188,7 @@ export const filterGreenHouseJobs = async () => {
     }
 
     filtered_greenhouse_list.sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
-    
+
     return filtered_greenhouse_list;
 };
 

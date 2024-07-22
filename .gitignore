@@ -12,3 +12,5 @@ IAC
 .terraform.lock.hcl
 .terraform.lock.hcl.backup
 .terraform.*
+logs
+.log
