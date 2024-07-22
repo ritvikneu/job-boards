@@ -42,6 +42,7 @@ export const fetchJobs = async (companyName, url, jobSearchUrl) => {
             data["location"] = job.PrimaryLocation;
             data["country"] = job.PrimaryLocationCountry;
             data["posting_date"] = job.PostedDate;
+            data["position_id"] = job.Id;
             jobData.push(data);
         });
 

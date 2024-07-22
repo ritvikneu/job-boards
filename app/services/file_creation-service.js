@@ -26,30 +26,34 @@ class FileHandler {
         const excelFilePath = path.join(process.cwd(), 'app', 'data', excelFileName);
      
 
-        if (existsSync(excelFilePath)) {
-            await this.workbook.xlsx.readFile(excelFilePath);
-        }
-
-        let worksheet = this.workbook.getWorksheet(listing);
-        if (!worksheet) {
-            worksheet = this.workbook.addWorksheet(listing);
-            worksheet.columns = [
-                { header: 'Company Name', key: 'company_name', width: 20 },
-                // { header: 'Job Title', key: 'job_title', width: 50 },
-                { header: 'Job Info', key: 'job_title', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
-                // { header: 'Link', key: 'job_link', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
-                { header: 'Location', key: 'location', width: 50 },
-                { header: 'Posting Date', key: 'posting_date', width: 50 },
-                { header: 'Job ID', key: 'position_id', width: 50 }
-            ];
-            data.forEach(row => {
-                row["job_title"] = {
-                    text: row["job_title"],
-                    hyperlink: row["job_link"]
-                };
-                worksheet.addRow(row);
-            });
-        }
+       try {
+         if (existsSync(excelFilePath)) {
+             await this.workbook.xlsx.readFile(excelFilePath);
+         }
+ 
+         let worksheet = this.workbook.getWorksheet(listing);
+         if (!worksheet) {
+             worksheet = this.workbook.addWorksheet(listing);
+             worksheet.columns = [
+                 { header: 'Company Name', key: 'company_name', width: 20 },
+                 // { header: 'Job Title', key: 'job_title', width: 50 },
+                 { header: 'Job Info', key: 'job_title', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
+                 // { header: 'Link', key: 'job_link', width: 70, style: { font: { color: { argb: 'FF0000FF' } } } },
+                 { header: 'Location', key: 'location', width: 50 },
+                 { header: 'Posting Date', key: 'posting_date', width: 50 },
+                 { header: 'Job ID', key: 'position_id', width: 50 }
+             ];
+             data.forEach(row => {
+                 row["job_title"] = {
+                     text: row["job_title"],
+                     hyperlink: row["job_link"]
+                 };
+                 worksheet.addRow(row);
+             });
+         }
+       } catch (error) {
+        console.log("Error occurred while writing to Excel file:", error);
+       }
 
         // if the worksheet exists 
 

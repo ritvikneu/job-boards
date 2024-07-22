@@ -7,12 +7,14 @@ import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
 import { FilterJobs, LocationChecker } from './filtering-service.js';
+import { logger } from '../middleware/logger.js';
 const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 
 const fileName = process.env.FILE_WDAY;
 const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
+var ERROR_COUNT = 0
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -20,6 +22,7 @@ export const workdayFetch = async (url, offset, companyName) => {
     try {
         const response = await axios.post(url, {
             appliedFacets: {},
+            // appliedFacets:{"timeType":["1aea6da227e21005504339b6b1770001"],"jobFamilyGroup":["e65dbadf6a50100168ed86fe4cf50001"],"workerSubType":["183bb31d97231001005066125c530001"]},
             limit: 20,
             offset: offset,
             searchText: ''
@@ -33,7 +36,8 @@ export const workdayFetch = async (url, offset, companyName) => {
         }
         return data.jobPostings || [];
     } catch (error) {
-        console.log('Error in fetching jobs:', error);
+        console.log('Error in fetching jobs:', url);
+        // logger.error('Error in fetching jobs:', error);
         return [];
     }
 }
@@ -43,31 +47,12 @@ export const workdayJobFetch = async (url) => {
         const response = await axios.get(url);
         return response.data.jobPostingInfo || null;
     } catch (error) {
+        ERROR_COUNT++;
         console.log('Error fetching single job:', url);
+        logger.error('Error fetching single job:', url);
         return null;
     }
 }
-
-// export const getAllCompanies = async () => {
-//     console.log("inside get all workday companies");
-//     const company_set = new Set();
-//     const csvFile = `app/companies/workday/${fileName}.csv`;
-//     const csvData = readFileSync(csvFile, 'utf8');
-//     const rows = csvData.split('\n');
-
-//     return rows.reduce((acc, row) => {
-//         try {
-//             const [companyName, companyURL] = row.split('<').map(part => part.trim().toLowerCase());
-//             if (companyName && !company_set.has(companyName)) {
-//                 company_set.add(companyName);
-//                 acc.push({ name: companyName, link: companyURL });
-//             }
-//         } catch (error) {
-//             console.log("Error in parsing company names:", companyName);
-//         }
-//         return acc;
-//     }, []);
-// }
 
 export const getAllCompaniesJson = async () => {
     console.log("inside get all workday companies");
@@ -85,6 +70,7 @@ export const getAllCompaniesJson = async () => {
             }
         } catch (error) {
             console.log("Error in parsing company names:", company);
+            logger.error("Error in parsing company names:", company);
         }
         return acc;
     }, []);
@@ -132,12 +118,11 @@ export const getWorkdayJobs = async (company_list) => {
                         allJobData.push(data);
                     }
                 }
-
             }
             catch (error) {
                 console.log("Error in fetching job data:", job_URL);
+                // logger.error("Error in fetching job data:", job_URL);
             }
-
         }));
         await delay(100); // Add delay to avoid overloading the server
     }
@@ -174,8 +159,12 @@ export const filterWorkDayJobs = async () => {
 
     fileHandler.writeToExcel(filteredJobs, fileName);
 
+    console.log("ERRORCOUNT", ERROR_COUNT);
+    logger.info("ERRORCOUNT", ERROR_COUNT);
+
     // print the duration in seconds
     console.log("Duration of workday jobs: " + (Date.now() - startTime) / 1000 + " seconds");
+    logger.info("Duration of workday jobs: " + (Date.now() - startTime) / 1000 + " seconds");
 
     return filteredJobs;
 }
@@ -185,28 +174,3 @@ export const workdayJobsNoFilter = async () => {
     const company_list = await getAllCompaniesJson();
     return getWorkdayJobs(company_list);
 }
-
-// export const getFilteredWorkDayJobs = async () => {
-//     console.log("inside get filtered workday jobs");
-//     return filterWorkDayJobs();
-// }
-
-// const fetchAndLogCompanies = async () => {
-//     try {
-//         const companies = await getAllCompaniesJson();
-//         companies.forEach(company => {
-//             console.log(`Name: ${company.name}, Link: ${company.link}`);
-//         });
-
-//         setTimeout(() => {
-//             console.log("companies", companies);
-//         }, 15000);
-//     } catch (error) {
-//         console.log("Error fetching companies:", error);
-//     }
-// }
-
-// Call the function
-// fetchAndLogCompanies();
-
-// console.log("companies", companies);
