@@ -16,6 +16,16 @@ async function setupRabbitMQ() {
     await channel.assertQueue(QUEUE_NAME, { durable: true });
     await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
     
+    channel.on('error', (err) => {
+      console.error('Channel error', err);
+      setupRabbitMQ();
+    });
+
+    channel.on('close', () => {
+      console.log('Channel closed, attempting to reconnect...');
+      setupRabbitMQ();
+    });
+    
     console.log('RabbitMQ connection established successfully');
   } catch (error) {
     console.error('Error setting up RabbitMQ:', error);
@@ -38,36 +48,27 @@ export const producer = async (sublinks) => {
   }
 };
 
-export const startConsumer = async (callback) => {
-    try {
-      await channel.consume(QUEUE_NAME, async (msg) => {
-        if (msg !== null) {
-          const messageContent = msg.content.toString();
-          await callback(messageContent);
-          channel.ack(msg);
-        }
-      });
-      console.log('Consumer is running and waiting for messages');
-    } catch (error) {
-      console.error('Error in consumer:', error);
-      throw error;  // Propagate the error
-    }
-  };
-  export const getNextMessage = async () => {
+
+  export const getNextMessages = async (batchSize) => {
     try {
       if (!channel) await setupRabbitMQ();
-      const message = await channel.get(QUEUE_NAME, { noAck: false });
-      if (message) {
-        const content = JSON.parse(message.content.toString());
-        return { 
-          content, 
-          ack: () => channel.ack(message) 
-        };
+      const messages = [];
+      for (let i = 0; i < batchSize; i++) {
+        const message = await channel.get(QUEUE_NAME, { noAck: false });
+        if (message) {
+          const content = JSON.parse(message.content.toString());
+          messages.push({ 
+            content, 
+            ack: () => channel.ack(message) 
+          });
+        } else {
+          break;
+        }
       }
-      return null;
+      return messages; // This will always be an array, even if empty
     } catch (error) {
-      console.error('Error getting message:', error);
-      throw error;
+      console.error('Error getting messages:', error);
+      return []; // Return an empty array in case of error
     }
   };
 
