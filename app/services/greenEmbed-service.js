@@ -17,8 +17,6 @@ export const getAllCompanies = async () => {
     console.log("inside get all companies");
 
     const greenEmbedUrl = "https://boards.greenhouse.io/embed/job_board?for=";
-    // console.log("000000000000-0-----00--0980980809080",fileName)
-    // const greenApis = new Set();
     const company_set = new Set();
     const csvFile = `app/companies/greenhouse/${fileName}.csv`;
     let company_list = [];
@@ -69,11 +67,7 @@ export const getGreenHouseJobs = async () => {
             response = await axios.get(company.link);
             const headers = response.headers;
 
-            // Calculate the size of the headers in bytes
-            const headerSize = JSON.stringify(headers).length;
-            // console.log(company.name + " success" + response.status + " " + headerSize)
             if (response.status == 200) {
-                // clearConsole();
                 const htmlDom = new jsdom.JSDOM(response.data);
                 htmlDom.window.document.querySelectorAll('section').forEach(async section => {
                     section.querySelectorAll('div.opening').forEach(async opening => {
@@ -188,9 +182,6 @@ export const getJobPostingDates = async (job_link) => {
         response = await axios.get(job_link);
         const headers = response.headers;
 
-        // Calculate the size of the headers in bytes
-        const headerSize = JSON.stringify(headers).length;
-        // console.log(job_link + " success" + response.status + " " + headerSize)
         if (response.status == 200) {
             const htmlDom = new jsdom.JSDOM(response.data);
             // fetch the job posting date from the script tag

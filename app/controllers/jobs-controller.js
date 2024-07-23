@@ -29,8 +29,8 @@ export const getGreenhouse = async (request, response) => {
 }
 
 export const getGreenhouseEmbed = async (request, response) => { 
-    const res = await ghEmbedService.getFilteredGreenHouseJobs();
-    // const res = await ghService.getFilteredGreenHouseJobs(true);
+    // const res = await ghEmbedService.getFilteredGreenHouseJobs();
+    const res = await ghService.getFilteredGreenHouseJobs(true);
     response.json({message: res});
 }
 

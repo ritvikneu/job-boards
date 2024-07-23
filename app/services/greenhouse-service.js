@@ -114,7 +114,6 @@ export const getGreenHouseJobs = async (embed) => {
                             data["job_link"] = GH_URL + job_link;
                         }
 
-
                         if (!job_links_seen.has(data["job_link"])) {
                             job_links_seen.add(data["job_link"]);
                             greenhouse_list.push(data);
@@ -134,19 +133,6 @@ export const getGreenHouseJobs = async (embed) => {
 
     const fetchJobsPromises = company_list.map(company => fetchJobs(company));
     await Promise.all(fetchJobsPromises);
-
-    // const fetchJobsBatched = async (companies) => {
-    //     const fetchJobsPromises = companies.map(company => limit(() => fetchJobs(company)));
-    //     await Promise.all(fetchJobsPromises);
-    // };
-
-    // // Process companies in batches
-    // const BATCH_SIZE = 50; // Adjust the batch size as needed
-    // for (let i = 0; i < company_list.length; i += BATCH_SIZE) {
-    //     const batch = company_list.slice(i, i + BATCH_SIZE);
-    //     await fetchJobsBatched(batch);
-    // }
-
 
     return greenhouse_list;
 };
@@ -169,6 +155,8 @@ export const filterGreenHouseJobs = async (embed) => {
                 let posting_date = await getJobPostingDates(data["job_link"]);
                 data["posting_date"] = posting_date;
                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                    return data;
+                }else if (!posting_date) {
                     return data;
                 }
             }
@@ -198,12 +186,12 @@ export const getJobPostingDates = async (job_link) => {
         response = await axios.get(job_link);
         const headers = response.headers;
 
-        // Calculate the size of the headers in bytes
-        const headerSize = JSON.stringify(headers).length;
-        // console.log(job_link + " success" + response.status + " " + headerSize)
         if (response.status == 200) {
             const htmlDom = new jsdom.JSDOM(response.data);
             // fetch the job posting date from the script tag
+            if (!htmlDom.window.document.querySelector('script[type="application/ld+json"]')) {
+                return null;
+            }
             const job_posting_content = htmlDom.window.document.querySelector('script[type="application/ld+json"]').innerHTML;
             const job_posting_date = JSON.parse(job_posting_content).datePosted;
             // console.log(job_posting_date);
@@ -215,6 +203,7 @@ export const getJobPostingDates = async (job_link) => {
 
     }
     catch (err) {
+        console.log("Error in getJobPostingDates: ", job_link,err);
         response = null;
     }
 }
