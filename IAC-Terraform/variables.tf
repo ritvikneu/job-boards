@@ -61,7 +61,7 @@ variable "ingress_ports_lb" {
 
 variable "ami_id" {
   type    = string
-  default = "ami-07d5de0334b2f3a74"
+  default = "ami-0ad5d30f6bf5322a8"
 }
 
 variable "key_name" {

@@ -1,7 +1,7 @@
-import * as greenService from './../services/greenhouse-service.js';
+import * as greenService from '../services/greenhouse_v2-service.js';
 import { response } from 'express';
 import axios from 'axios';
-import * as ghService from "../services/greenhouse-service.js";
+import * as ghService from "../services/greenhouse_v2-service.js";
 import * as ghEmbedService from "../services/greenEmbed-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as workdayService from "../services/workday-service.js";
@@ -49,7 +49,6 @@ export const getDice = async (request, response) => {
     const res = await diceService.filterDiceJobs();
     response.json({message: res});
 }
-
 
 
 export const getOraCloud = async (request, response) => { 
