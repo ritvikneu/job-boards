@@ -15,15 +15,17 @@ const filterJob = new FilterJobs();
 
 var fileName = process.env.FILE_GH
 const CONCURRENCY_LIMIT = 300; // Number of concurrent requests
+
+const company_with_no_date = new Set();
 export const getAllCompanies = async (embed) => {
     console.log("inside get all companies");
     if (embed) {
         fileName = process.env.FILE_EMBED;
     }
 
-    let greenUrl = "https://boards.greenhouse.io/";
+    let greenUrl = "https://job-boards.greenhouse.io/";
     if (embed) {
-        greenUrl = "https://boards.greenhouse.io/embed/job_board?for=";
+        greenUrl = "https://job-boards.greenhouse.io/embed/job_board?for=";
     }
     // console.log("000000000000-0-----00--0980980809080",fileName)
     // const greenApis = new Set();
@@ -55,7 +57,7 @@ export const getAllCompanies = async (embed) => {
         }
     });
 
-    // fileHandler.writeToCsvCompanyNames(csvCompanyNames.sort(), "g-test");
+    // fileHandler.writeToCsvCompanyNames(csvCompanyNames.sort(), "gh-embed-ez-all");
     // process.exit();
     return company_list;
 }
@@ -73,7 +75,7 @@ export const getFilteredGreenHouseJobs = async (embed) => {
 }
 
 
-const GH_URL = "https://boards.greenhouse.io";
+const GH_URL = "https://job-boards.greenhouse.io";
 
 export const getGreenHouseJobs = async (embed) => {
     console.log("inside get greenhouse jobs");
@@ -82,58 +84,60 @@ export const getGreenHouseJobs = async (embed) => {
     const job_links_seen = new Set();
     const greenhouse_list = [];
 
-    const fetchJobs = async (company) => {
+    const fetchJobData = async (company) => {
         try {
             const response = await axios.get(company.link);
             if (response.status === 200) {
                 const htmlDom = new jsdom.JSDOM(response.data);
-                const jobs = htmlDom.window.document.querySelectorAll('section div.opening');
-                jobs.forEach(opening => {
-                    const data = {};
-                    const link = opening.querySelector('a');
-                    const location = opening.querySelector('span.location');
-
-                    if (link && location) {
-                        const job_link = link.getAttribute('href');
-
-                        data["company_name"] = company.name;
-                        // console.log("company name", company.name);
-                        data["job_title"] = link.innerHTML;
-                        data["location"] = location.innerHTML;
-
-                        if (embed) {
-
-                            let position_id = link.getAttribute('href').split('?gh_jid=')[1];
-                            data["position_id"] = position_id;
-                            data["job_link"] = GH_URL + "/" + data["company_name"] + "/jobs/" + position_id;
+                const document = htmlDom.window.document;
+                
+                const scriptTag = Array.from(document.querySelectorAll('script')).find(
+                    script => script.textContent.includes('window.__remixContext')
+                );
+    
+                if (scriptTag) {
+                    const scriptContent = scriptTag.textContent;
+                    const remixContextMatch = scriptContent.match(/window\.__remixContext\s*=\s*({[\s\S]*?});/);
+                    
+                    if (remixContextMatch) {
+                        const remixContextStr = remixContextMatch[1];
+                        const remixContext = JSON.parse(remixContextStr);
+                        
+                        if (remixContext.state && remixContext.state.loaderData && remixContext.state.loaderData['routes/$url_token'].jobPosts) {
+                            const jobPostingsFromBaseUrl = remixContext.state.loaderData['routes/$url_token'].jobPosts.data;
+                            
+                            for (const job of jobPostingsFromBaseUrl) {
+                                const posting_date =  job.published_at ;
                                 
-                        } else {
-
-                            let position_id = job_link.split('/')[3];
-                            data["position_id"] = position_id;
-                            data["job_link"] = GH_URL + job_link;
-                        }
-
-                        if (!job_links_seen.has(data["job_link"])) {
-                            job_links_seen.add(data["job_link"]);
-                            greenhouse_list.push(data);
+                                if (await filterJob.postingDateChecker(posting_date)) {
+                                    const extractedJob = {
+                                        job_id: job.id,
+                                        job_title: job.title,
+                                        internal_job_id: job.internal_job_id,
+                                        posting_date: posting_date,
+                                        position_id: job.requisition_id,
+                                        location: job.location,
+                                        job_link: job.absolute_url,
+                                        published_at: job.published_at,
+                                        company_name: company.name
+                                    };
+                                    
+                                    greenhouse_list.push(extractedJob);
+                                }
+                            }
                         }
                     }
-                });
-                htmlDom.window.close();
-            } else {
-                console.log(`Error fetching jobs for ${company.name}`);
-                logger.error(`Error fetching jobs for ${company.name}`);
-            }
+                }
+            } 
+            return [];
         } catch (err) {
-            console.log(`Error fetching jobs for ${company.name}`);
-            logger.error(`Error fetching jobs for ${company.name}`);
+            console.error('Error fetching jobs:', err);
+            return [];
         }
     };
 
-    const fetchJobsPromises = company_list.map(company => fetchJobs(company));
+    const fetchJobsPromises = company_list.map(company => fetchJobData(company));
     await Promise.all(fetchJobsPromises);
-
     return greenhouse_list;
 };
 
@@ -143,7 +147,13 @@ export const filterGreenHouseJobs = async (embed) => {
     const filtered_greenhouse_list = [];
     const limit = pLimit(CONCURRENCY_LIMIT);
 
+
     const filterJobData = async (data) => {
+        // console.log(`------ ${data["job_link"]} -----`);
+        if(!data["job_link"] || data["company_name"] in company_with_no_date) {
+            console.log("skipping---------", data["company_name"]);
+            return null;
+        }
         let location_to_check = data["location"].toLowerCase();
         const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
 
@@ -152,13 +162,13 @@ export const filterGreenHouseJobs = async (embed) => {
             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
 
             if (title_matched) {
-                let posting_date = await getJobPostingDates(data["job_link"]);
-                data["posting_date"] = posting_date;
-                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                // let posting_date = data["posting_date"];
+                // if (posting_date && await filterJob.postingDateChecker(posting_date)) {
                     return data;
-                }else if (!posting_date) {
-                    return data;
-                }
+                // }
+                // else if (!posting_date) {
+                //     return data;
+                // }
             }
         }
         return null;
@@ -180,7 +190,7 @@ export const filterGreenHouseJobs = async (embed) => {
     return filtered_greenhouse_list;
 };
 
-export const getJobPostingDates = async (job_link) => {
+export const getJobPostingDates = async (job_link,company) => {
     let response = null;
     try {
         response = await axios.get(job_link);
@@ -189,7 +199,7 @@ export const getJobPostingDates = async (job_link) => {
         if (response.status == 200) {
             const htmlDom = new jsdom.JSDOM(response.data);
             // fetch the job posting date from the script tag
-            if (!htmlDom.window.document.querySelector('script[type="application/ld+json"]')) {
+            if (!htmlDom.window.document.querySelector('script[type="application/ld+json"]').innerHTML) {
                 return null;
             }
             const job_posting_content = htmlDom.window.document.querySelector('script[type="application/ld+json"]').innerHTML;
@@ -203,8 +213,48 @@ export const getJobPostingDates = async (job_link) => {
 
     }
     catch (err) {
-        console.log("Error in getJobPostingDates: ", job_link,err);
-        response = null;
+        console.log("Error in getJobPostingDates: ", job_link,err.message);
+        company_with_no_date.add(company);
+        return null;
     }
 }
 
+
+export const getJobPublishedAt = async (job_link) => {
+  try {
+    // Send a GET request to the URL
+    const response = await axios.get(job_link);
+
+    if (response.status === 200) {
+      // Create a JSDOM object to parse the HTML content
+      const dom = new jsdom.JSDOM(response.data);
+      const document = dom.window.document;
+
+      // Find the script tag containing the JSON data
+      const scriptTag = Array.from(document.querySelectorAll('script')).find(
+        script => script.textContent.includes('window.__remixContext')
+      );
+
+      if (scriptTag) {
+        // Extract the JSON data from the script tag
+        const jsonText = scriptTag.textContent
+          .split('window.__remixContext = ')[1]
+          .split(';')[0];
+
+        // Parse the JSON data
+        const data = JSON.parse(jsonText);
+
+        // Extract the published_at date
+        const publishedAt = data.state.loaderData['routes/$url_token_.jobs_.$job_post_id'].jobPost.published_at;
+
+        return publishedAt;
+      }
+    }
+
+    console.log(`${job_link} failed`);
+    return null;
+  } catch (err) {
+    console.error("Error in getJobPublishedAt: ", job_link, err.message);
+    return null;
+  }
+};

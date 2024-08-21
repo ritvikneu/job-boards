@@ -5,14 +5,15 @@ export const createAndRetrieveUser = async function createAndRetrieveUser() {
     try {
         // Create a new user
         const newUser = await User.create({
-            username: 'testuser',
-            email: 'testuser@example.com'
+            // create dynamic user name time stamp
+            username: 'testuser2',
+            email: 'testuser2@example.com'
         });
         console.log('New user created:', newUser.toJSON());
 
         // Retrieve the user
-        const retrievedUser = await User.findOne({ where: { username: 'testuser' } });
-        console.log('Retrieved user:', retrievedUser.toJSON());
+        const retrievedUser = await User.findOne({ where: { username: 'testuser2' } });
+        // console.log('Retrieved user:', retrievedUser.toJSON());
 
         return retrievedUser;
     } catch (error) {
@@ -24,7 +25,7 @@ export const createAndRetrieveUser = async function createAndRetrieveUser() {
 export const createAndRetrieveWorkday = async function createAndRetrieveWorkday() {
     try {
         const newWorkday = await Workday.create({
-            Job_URL: 'https://example.com/job1',
+            Job_URL: 'https://example.com/job2',
             Posting_Date: new Date(),
             CompanyName: 'Example Corp',
             Title: 'Software Engineer',
@@ -35,7 +36,7 @@ export const createAndRetrieveWorkday = async function createAndRetrieveWorkday(
         });
         console.log('New Workday entry created:', newWorkday.toJSON());
 
-        const retrievedWorkday = await Workday.findOne({ where: { Job_URL: 'https://example.com/job1' } });
+        const retrievedWorkday = await Workday.findOne({ where: { Job_URL: 'https://example.com/job2' } });
         console.log('Retrieved Workday entry:', retrievedWorkday.toJSON());
 
         return retrievedWorkday;
@@ -47,8 +48,8 @@ export const createAndRetrieveWorkday = async function createAndRetrieveWorkday(
 
 export const testModels =  async function testModels() {
     try {
-        // await createAndRetrieveUser();
-        // console.log('User data:', use.toJSON());
+        const user = await createAndRetrieveUser();
+        console.log('User data:', user.toJSON());
         
         const workday = await createAndRetrieveWorkday();
         console.log('Workday data:', workday.toJSON());

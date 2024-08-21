@@ -16,8 +16,8 @@ const fileName = process.env.FILE_WDAY;
 const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 let ERROR_COUNT = 0
-const CONSUMER_COUNT = 1; // Number of concurrent consumers
-const BATCH_SIZE = 100; // Number of messages to process in each batch
+const CONSUMER_COUNT = 5; // Number of concurrent consumers
+const BATCH_SIZE = 200; // Number of messages to process in each batch
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 import Bottleneck from 'bottleneck';
@@ -136,7 +136,9 @@ export const workdayJobFetch = async (url, retries = 3) => {
     } catch (error) {
         if (error.response && error.response.status === 429 && retries > 0) {
             console.log(`Rate limited in workdayJobFetch. Waiting for 10 seconds before retry. Retries left: ${retries}`);
-            await delay(10000); // Wait for 10 seconds
+            // delay for an exponential time every time we hit rate limit
+            let delay_time = Math.pow(2, 3 - retries) * 10000;
+            await delay(delay_time); // Wait for 10 seconds
             return workdayJobFetch(url, retries - 1); // Retry with one less retry attempt
         }
         ERROR_COUNT++;
@@ -202,7 +204,7 @@ export const getWorkdayJobs = async (company_list) => {
                 for (const message of messages) {
                     try {
                         const { url, companyName } = message.content;
-                        const jobData = await scheduleRequest(url);
+                        const jobData = await workdayJobFetch(url);
                         if (jobData) {
                             const data = {
                                 company_name: companyName,

@@ -55,12 +55,12 @@ export const getAllCompanies = async () => {
 }
 
 export const getLeverJobs = async () => {
-    logger.info("Inside get lever jobs");
-    console.log("inside get lever jobs");
     const LEVER_URL = "https://jobs.lever.co/";
     const company_list = await getAllCompanies();
     let job_links_seen = new Set();
     // create a list of greenhouse companies intialize to empty
+    logger.info("Inside get lever jobs");
+    console.log("inside get lever jobs");
     let lever_list = [];
     for (let i = 0; i < company_list.length; i++) {
         let company = company_list[i];
@@ -197,7 +197,7 @@ export const filterLeverJobs_normal = async () => {
     return filtered_lever_list;
 }
 
-
+// https://jobs.lever.co/latitudeinc/41326559-ef9a-4b31-ab5d-739be683d52f/
 export const getFilteredLeverJobs = async () => {
     const startTimer = Date.now();
     logger.info("Started Lever Jobs at: " + startTimer);

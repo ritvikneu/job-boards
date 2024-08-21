@@ -14,9 +14,7 @@ const fileHandler = new FileHandler();
 
 async function getDiceJobs(queryParams) {
     const baseUrl = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
-
     const url = new URL(baseUrl);
-
     // Add query parameters to the URL
     Object.keys(queryParams).forEach(key => {
         if (Array.isArray(queryParams[key])) {

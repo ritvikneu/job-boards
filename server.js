@@ -11,12 +11,12 @@ const port = 7777;
   async function main() {
     try {
       // Test the connection
-      await testConnection();
+      // await testConnection();
       // Sync the database
-      await syncDatabase();
+      // await syncDatabase();
 
       // Test the models
-      await testModels();
+    //   await testModels();
 
       // Start the server
       app.listen(port, () => console.log(`Server is listening at ${port}`));
