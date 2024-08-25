@@ -7,7 +7,7 @@ import * as dynamoService from "./dynamo-service.js";
 import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
-import { logger } from '../middleware/logger.js';
+// import { logger } from '../middleware/logger.js';
 
 import { config } from 'dotenv';
 config();
@@ -17,6 +17,9 @@ const filterJob = new FilterJobs();
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 
 const fileName = process.env.FILE_LEVER
+
+import { createCustomLogger } from '../middleware/logger.js';
+const logger = createCustomLogger(fileName);
 
 export const getAllCompanies = async () => {
     console.log("inside get all companies for lever");

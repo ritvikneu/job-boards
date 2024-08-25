@@ -5,7 +5,10 @@ import { readFileSync } from 'fs';
 import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
-import { logger } from '../middleware/logger.js';
+// import { logger } from '../middleware/logger.js';
+
+import { createCustomLogger } from '../middleware/logger.js';
+
 
 import axios from 'axios';
 import { config } from 'dotenv';
@@ -17,6 +20,8 @@ const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 
 const fileName = process.env.FILE_ORACLOUD
+
+const logger = createCustomLogger(fileName);
 
 export const fetchJobs = async (companyName, url, jobSearchUrl) => {
 

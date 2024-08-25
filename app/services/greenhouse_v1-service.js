@@ -25,7 +25,7 @@ export const getAllCompanies = async (embed) => {
 
     let greenUrl = "https://job-boards.greenhouse.io/";
     if (embed) {
-        greenUrl = "https://boards.greenhouse.io/embed/job_board?for=";
+        greenUrl = "https://job-boards.greenhouse.io/embed/job_board?for=";
     }
     // console.log("000000000000-0-----00--0980980809080",fileName)
     // const greenApis = new Set();
