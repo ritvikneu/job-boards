@@ -1,9 +1,10 @@
-// const { MailtrapClient } = require("mailtrap");
 import { MailtrapClient } from "mailtrap";
 import { readFileSync } from "fs";
 import path from "path";
+import { config } from "dotenv";
+config();
 
-const TOKEN = "6ea8a4c56498dc3fff42c01a3f1de90f";
+const TOKEN = process.env.MAILTRAP_TOKEN;
 const ENDPOINT = "https://send.api.mailtrap.io/";
 
 

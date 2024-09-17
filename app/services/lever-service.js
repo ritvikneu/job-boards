@@ -25,31 +25,15 @@ export const getAllCompanies = async () => {
     console.log("inside get all companies for lever");
     logger.info("inside get all companies for lever");
     const leverUrl = "https://jobs.lever.co/";
-    // const greenApis = new Set();
-    const company_set = new Set();
     const csvFile = `app/companies/lever/${fileName}.csv`;
-    let company_list = [];
-    const csvCompanyNames = [];
     const csvData = readFileSync(csvFile, 'utf8');
-    const rows = csvData.split('\n');
-    // console.log(rows);
-    rows.forEach(row => {
-        const splitRow = row.split(',');
-        if (splitRow.length > 0) {
-            const company = splitRow[0].split('/');
-            if (company.length > 0) {
-                if (!company_set.has(company[0])) {
-                    // write all the compnies to a csv file
-                    csvCompanyNames.push(company[0]);
-                    company_set.add(company[0]);
-                    company_list.push({
-                        name: company[0],
-                        link: leverUrl + company[0]
-                    })
-                }
-            }
-        }
-    });
+    const rows = csvData.split('\n').map(row => row.toLowerCase().trim()).filter(row => row.length > 0);
+
+    const company_set = new Set(rows);
+    const company_list = Array.from(company_set).map(companyName => ({
+        name: companyName,
+        link: leverUrl + companyName
+    }));
     // sort csvCompanyNames
 
     // fileHandler.writeToCsvCompanyNames(csvCompanyNames.sort(), "lever");
@@ -58,7 +42,6 @@ export const getAllCompanies = async () => {
 }
 
 export const getLeverJobs = async () => {
-    const LEVER_URL = "https://jobs.lever.co/";
     const company_list = await getAllCompanies();
     let job_links_seen = new Set();
     // create a list of greenhouse companies intialize to empty
@@ -90,23 +73,24 @@ export const getLeverJobs = async () => {
                         "job_title": postingNameText,
                         "job_link": postingTitleHref,
                         "location": locationText,
+                        "position_id": postingTitleHref.split('/')[4]
                     }
                     lever_list.push(data);
                 });
             }
             else {
-                console.log(company.name + " failed ")
-                logger.info("Failed Lever on company: " + company.name);
+                console.log(`Failed Lever on company: ${company.link}`);
+                logger.info(`Failed Lever on company: ${company.link}`);
             }
         }
         catch (err) {
             response = null;
+            console.log(`Failed Lever on company: ${company.link}`);
+            logger.info(`Failed Lever on company link: ${company.link}`);
         }
     }
     return lever_list;
 }
-
-
 
 export const filterLeverJobs = async () => {
     const lever_list = await getLeverJobs();
@@ -116,31 +100,35 @@ export const filterLeverJobs = async () => {
 
     const filter_lever = lever_list.map(async data => {
 
-        let location_to_check = data["location"];
-        location_to_check = location_to_check.toLowerCase();
-        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
-
-        if (location_matched) {
-            let title_to_check = data["job_title"];
-            title_to_check = title_to_check.toLowerCase();
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-
-            let lever_job_link = data["job_link"];
-
-            if (title_matched) {
-                let posting_date = await getJobPostingDates(lever_job_link);
-                data["posting_date"] = posting_date;
-                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                return data;
+        try {
+            let location_to_check = data["location"];
+            location_to_check = location_to_check.toLowerCase();
+            const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+    
+            if (location_matched) {
+                let title_to_check = data["job_title"];
+                title_to_check = title_to_check.toLowerCase();
+                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+    
+                let lever_job_link = data["job_link"];
+    
+                if (title_matched) {
+                    let posting_date = await getJobPostingDates(lever_job_link);
+                    data["posting_date"] = posting_date;
+                    if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+                        return data;
+                    }
                 }
             }
+        } catch (error) {
+            console.log(`Failed to filter Lever Job: ${data.job_link}`);
+            logger.info(`Failed to filter Lever Job: ${data.job_link}`);
         }
         return null;
     });
 
     // Wait for all promises to resolve
     const results = await Promise.all(filter_lever);
-
     // Filter out null values and add valid items to the filtered list and sort by posting date
     results.forEach(data => {
         if (data !== null) {
@@ -151,10 +139,8 @@ export const filterLeverJobs = async () => {
         return new Date(b.posting_date) - new Date(a.posting_date);
     }
     );
-
     return filtered_lever_list;
 }
-
 
 export const filterLeverJobs_normal = async () => {
     const lever_list = await getLeverJobs();
@@ -196,7 +182,7 @@ export const filterLeverJobs_normal = async () => {
         return new Date(b.posting_date) - new Date(a.posting_date);
     }
     );
-    
+
     return filtered_lever_list;
 }
 
@@ -213,7 +199,7 @@ export const getFilteredLeverJobs = async () => {
     fileHandler.writeToExcel(filteredJobs, fileName);
     logger.info("Time taken to filter Lever Jobs: " + (Date.now() - startTimer) / 1000 + " seconds");
     console.log("Time taken to filter Lever Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
-    
+
     return filteredJobs;
 }
 
@@ -221,24 +207,17 @@ export const getJobPostingDates = async (job_link) => {
     let response = null;
     try {
         response = await axios.get(job_link);
-        const headers = response.headers;
-
-        // Calculate the size of the headers in bytes
-        const headerSize = JSON.stringify(headers).length;
-        // console.log(job_link + " success" + response.status + " " + headerSize)
         if (response.status == 200) {
             const htmlDom = new jsdom.JSDOM(response.data);
             // fetch the job posting date from the script tag
             const job_posting_content = htmlDom.window.document.querySelector('script[type="application/ld+json"]').innerHTML;
             const job_posting_date = JSON.parse(job_posting_content).datePosted;
-            // console.log(job_posting_date);
             return job_posting_date;
         }
         else {
             console.log(job_link + " failed ")
             logger.info("Failed to get Date for Lever Job: " + job_link);
         }
-
     }
     catch (err) {
         response = null;
@@ -324,52 +303,3 @@ export const filterLeverJobswithDynamo = async () => {
     logger.info("Time taken to filter Lever Jobs: " + (Date.now() - startTimer) / 1000 + " seconds");
     return filtered_lever_list;
 }
-
-
-// export const filterLeverJobs = async () => {
-//     const lever_list = await getLeverJobs();
-//     const filtered_lever_list = [];
-//     console.log("inside filter lever jobs");
-
-//     const filter_lever = lever_list.map(async job => {
-
-//         let lever_job_link = job.job_link;
-//         let posting_date = await getJobPostingDates(lever_job_link);
-//         job.posting_date = posting_date;
-//         // check if posting date is valid
-//         if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-
-//             let location_to_check = job.location;
-//             location_to_check = location_to_check.toLowerCase();
-//             const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
-//             // check if location is valid
-//             if (location_matched) {
-
-//                 let title_to_check = job.job_title;
-//                 title_to_check = title_to_check.toLowerCase();
-//                 const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-//                 // check if title is valid
-//                 if (title_matched) {
-//                     return job;
-//                 }
-//             }
-//         }
-
-//         return null;
-//     });
-
-//     // Wait for all promises to resolve
-//     const results = await Promise.all(filter_lever);
-
-//     // Filter out null values and add valid items to the filtered list and sort by posting date
-//     results.forEach(data => {
-//         if (data !== null) {
-//             filtered_lever_list.push(data);
-//         }
-//     });
-//     filtered_lever_list.sort((a, b) => {
-//         return new Date(b.posting_date) - new Date(a.posting_date);
-//     }
-//     );
-//     return filtered_lever_list;
-// }

@@ -12,7 +12,7 @@ const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 import { producer, getNextMessages, closeConnection, consusmerBatch } from './rabbitMQ-service.js';
 
-const fileName = process.env.FILE_WDAY;
+let fileName = process.env.FILE_WDAY;
 const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 let ERROR_COUNT = 0
@@ -53,7 +53,9 @@ export const workdayJobsNoFilter = async () => {
     return getWorkdayJobs(company_list);
 }
 
-export const filterWorkDayJobs = async () => {
+export const filterWorkDayJobs = async (file_name) => {
+    fileName = file_name;
+    console.log("FileName------------", fileName)
     const startTime = Date.now();
     console.log("inside filter workday jobs");
     const workday_list = await workdayJobsNoFilter();

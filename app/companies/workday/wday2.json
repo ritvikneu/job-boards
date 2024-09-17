@@ -44,10 +44,6 @@
     "link": "https://hp.wd5.myworkdayjobs.com/wday/cxs/hp/externalcareersite/jobs"
   },
   {
-    "name": "rtx",
-    "link": "https://globalhr.wd5.myworkdayjobs.com/wday/cxs/globalhr/rec_rtx_ext_gateway/jobs"
-  },
-  {
     "name": "godirect",
     "link": "https://godirect.wd5.myworkdayjobs.com/wday/cxs/godirect/voya_jobs/jobs"
   },
@@ -82,10 +78,6 @@
   {
     "name": "yahoo",
     "link": "https://ouryahoo.wd5.myworkdayjobs.com/wday/cxs/ouryahoo/careers/jobs"
-  },
-  {
-    "name": "parsons",
-    "link": "https://parsons.wd5.myworkdayjobs.com/wday/cxs/parsons/search/jobs"
   },
   {
     "name": "pcaobus",
@@ -310,5 +302,10 @@
   {
     "name": "mckesson",
     "link": "https://mckesson.wd3.myworkdayjobs.com/wday/cxs/mckesson/CoverMyMeds_External_Careers/jobs"
+  },
+  {
+    "name": "msd",
+    "link": "https://msd.wd5.myworkdayjobs.com/wday/cxs/msd/SearchJobs/jobs"
   }
 ]
+
