@@ -5,8 +5,6 @@ import User from './app/database/user.js';
 // import User from './app/database/User.js';
 
 const port = 7777;
-
-
   
   async function main() {
     try {

@@ -14,17 +14,14 @@ const filterJob = new FilterJobs();
 let fileName = process.env.FILE_GH
 const CONCURRENCY_LIMIT = 100; // Number of concurrent requests
 
-
 import { createCustomLogger } from '../middleware/logger.js';
-let logger = createCustomLogger(fileName);
+const logger = createCustomLogger(fileName);
+
 
 let EMBED = false;
 
 export const getFilteredGreenHouseJobs = async (embed) => {
     EMBED = embed;
-    fileName = EMBED ? process.env.FILE_EMBED : process.env.FILE_GH;
-    logger = createCustomLogger(fileName);
-
     const startTimer = new Date();
 
     console.log("Start filtering greenhouse jobs:", startTimer);
@@ -44,10 +41,9 @@ export const getAllCompanies = async () => {
     const greenUrl = EMBED ? `${baseGreenUrl}embed/job_board?for=` : baseGreenUrl;
     fileName = EMBED ? process.env.FILE_EMBED : process.env.FILE_GH;
 
-
     const csvFile = `app/companies/greenhouse/${fileName}.csv`;
     const csvData = readFileSync(csvFile, 'utf8');
-    const rows = csvData.split('\n').map(row => row.toLowerCase().trim()).filter(row => row.length > 0);
+    const rows = csvData.split('\n').map(row => row.toLowerCase()).filter(row => row.length > 0);
 
     const company_set = new Set(rows);
     const company_list = Array.from(company_set).map(companyName => ({
@@ -134,10 +130,7 @@ export const getGreenHouseJobs = async () => {
                                             published_at: posting_date,
                                             company_name: company.name
                                         };
-
-                                        if (extractedJob.job_link) {
-                                            greenhouse_list.push(extractedJob);
-                                        }
+                                        greenhouse_list.push(extractedJob);
                                     }
                                 }
                             }
@@ -159,15 +152,14 @@ export const getGreenHouseJobs = async () => {
 
     // const fetchJobsPromises = company_list.map(company => limit(() => fetchJobData(company)));
     // process all companies in multiple batches
-    // for (let i = 0; i < company_list.length; i += CONCURRENCY_LIMIT) {
-    //     const batch = company_list.slice(i, i + CONCURRENCY_LIMIT);
-    //     const batchResults = await Promise.all(batch.map(company => limit(() => fetchJobData(company))));
-    //     greenhouse_list.push(...batchResults.filter(job => job !== null));
-    // }
-    const fetchJobsPromises = company_list.map(company => fetchJobData(company));
-    await Promise.all(fetchJobsPromises);
-    return greenhouse_list;
+    for (let i = 0; i < company_list.length; i += CONCURRENCY_LIMIT) {
+        const batch = company_list.slice(i, i + CONCURRENCY_LIMIT);
+        const batchResults = await Promise.all(batch.map(company => limit(() => fetchJobData(company))));
+        greenhouse_list.push(...batchResults.filter(job => job !== null));
+    }
 
+    // await Promise.all(fetchJobsPromises);
+    return greenhouse_list;
 };
 
 export const filterGreenHouseJobs = async () => {
@@ -179,7 +171,7 @@ export const filterGreenHouseJobs = async () => {
 
     const filterJobData = async (data) => {
         try {
-            if (!data || !data.job_link) {
+            if (!data.job_link) {
                 return null;
             }
     
@@ -196,7 +188,8 @@ export const filterGreenHouseJobs = async () => {
             }
             return null;
         } catch (error) {
-            console.log("Error filtering job data for company:", error.message);
+            console.log("Error filtering job data for company:", data.company_name, error.message);
+            logger.error(`Error filtering job data for company: ${data.company_name} msg: ${error.message}`, error.message);
         }
     };
 

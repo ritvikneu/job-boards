@@ -1,22 +1,23 @@
-// import { winston } from 'winston';
 import winston from 'winston';
-
 import { createLogger, format, transports } from 'winston';
 import { config } from 'dotenv';
 config();
 
-export const logger = createLogger({
+export const createCustomLogger = (file_name) => {
+  return createLogger({
     level: 'http',
     format: format.combine(
-        format.timestamp({
-            format: 'YYYY-MM-DD HH:mm:ss'
-        }),
-
-        format.json(),
+      format.timestamp({
+        format: 'YYYY-MM-DD HH:mm:ss'
+      }),
+      format.json(),
     ),
-    // defaultMeta: { service: 'webapp.service' },
     transports: [
-        new winston.transports.File({ filename: 'logs/info.log', level: 'info' }),
-        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: `logs/${file_name}_info.log`, level: 'info' }),
+      new winston.transports.File({ filename: `logs/${file_name}_error.log`, level: 'error' }),
     ],
-});
+  });
+};
+
+// Export a default logger for backward compatibility
+export const logger = createCustomLogger('default');

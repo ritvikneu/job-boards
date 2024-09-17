@@ -12,7 +12,7 @@ const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 import { producer, getNextMessages, closeConnection, consusmerBatch } from './rabbitMQ-service.js';
 
-const fileName = process.env.FILE_WDAY;
+let fileName = process.env.FILE_WDAY;
 const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 let ERROR_COUNT = 0
@@ -21,9 +21,8 @@ const BATCH_SIZE = 200; // Number of messages to process in each batch
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 import Bottleneck from 'bottleneck';
-import e from 'cors';
 
-
+let rate_limit_count = 0;
 
 
 export const getAllCompaniesJson = async () => {
@@ -54,7 +53,9 @@ export const workdayJobsNoFilter = async () => {
     return getWorkdayJobs(company_list);
 }
 
-export const filterWorkDayJobs = async () => {
+export const filterWorkDayJobs = async (file_name) => {
+    fileName = file_name;
+    console.log("FileName------------", fileName)
     const startTime = Date.now();
     console.log("inside filter workday jobs");
     const workday_list = await workdayJobsNoFilter();
@@ -93,11 +94,8 @@ export const filterWorkDayJobs = async () => {
 const limiter = new Bottleneck({
     maxConcurrent: 5, // Allow 5 concurrent requests
     minTime: 1000 // Minimum time between requests (in ms)
-  });
-  
-// // Wrap axios with the rate limiter
-// const limitedAxiosGet = limiter.wrap(axios.get);
-// const limitedAxiosPost = limiter.wrap(axios.post);
+});
+
 
 export const workdayFetch = async (url, offset, companyName, retries = 3) => {
     try {
@@ -130,14 +128,19 @@ export const workdayFetch = async (url, offset, companyName, retries = 3) => {
 
 
 export const workdayJobFetch = async (url, retries = 3) => {
+    // count the time in seconds spent in rate limit
+    const startTime = Date.now();
     try {
         const response = await axios.get(url);
+        const endTime = Date.now();
+        const timeSpent = (endTime - startTime) / 1000;
+        rate_limit_count += timeSpent;
         return response.data.jobPostingInfo || null;
     } catch (error) {
         if (error.response && error.response.status === 429 && retries > 0) {
-            console.log(`Rate limited in workdayJobFetch. Waiting for 10 seconds before retry. Retries left: ${retries}`);
             // delay for an exponential time every time we hit rate limit
-            let delay_time = Math.pow(2, 3 - retries) * 10000;
+            let delay_time = Math.pow(2, 3 - retries) * 20000;
+            // console.log(`Rate limited in workdayJobFetch. Waited for ${delay_time} seconds before retry. Retries left: ${retries}`);
             await delay(delay_time); // Wait for 10 seconds
             return workdayJobFetch(url, retries - 1); // Retry with one less retry attempt
         }
@@ -149,94 +152,111 @@ export const workdayJobFetch = async (url, retries = 3) => {
 }
 
 function scheduleRequest(endpoint) {
-    return limiter.schedule(()=>{
-      return workdayJobFetch(endpoint);
+    return limiter.schedule(() => {
+        return workdayJobFetch(endpoint);
     })
-  }
+}
 
 export const getWorkdayJobs = async (company_list) => {
+    // Arrays and sets to store job data
     const jobPostings = [];
     const job_links_seen = new Set();
     const processedJobs = [];
 
+    // Producer function to fetch job listings and queue them for processing
     const producerPromise = async () => {
         console.log("Starting producer process...");
+
+        // Helper function to fetch jobs for a single company
         const fetchJobsForCompany = async (company) => {
             let offset = 0;
+            const companyJobs = [];
+            // Fetch jobs in batches until we hit the offset limit or run out of jobs
             while (offset < WORKDAY_OFFSET) {
                 const jobs = await workdayFetch(company.link, offset, company.name);
-                jobPostings.push(...jobs);
-                if (jobs.length < 20) break;
+                companyJobs.push(...jobs);
+                if (jobs.length < 20) break; // Less than a full page, no more jobs
                 offset += 20;
             }
+            return companyJobs;
         }
 
-        for (let i = 0; i < company_list.length; i += CONCURRENCY_LIMIT) {
-            const batch = company_list.slice(i, i + CONCURRENCY_LIMIT);
-            await Promise.all(batch.map(fetchJobsForCompany));
-        }
+        // Fetch jobs for all companies concurrently
+        const allJobs = await Promise.all(company_list.map(fetchJobsForCompany));
+        jobPostings.push(...allJobs.flat());
 
+        // Prepare job URLs for queueing
         const jobUrls = jobPostings.map(job => ({
             url: job.baseURL.slice(0, -5) + job.externalPath,
             companyName: job.companyName
         }));
 
+        // Queue all job URLs for processing
         await producer(jobUrls);
         console.log(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
-        
+
         return jobUrls.length;
     };
 
+    // Consumer worker function to process queued jobs
     const consumerWorker = async (workerId) => {
         console.log(`Consumer ${workerId} started`);
         let emptyQueueCount = 0;
+        // Continue processing until we've seen an empty queue 3 times in a row
         while (emptyQueueCount < 3) {
             try {
+                // Fetch a batch of messages from the queue
                 const messages = await getNextMessages(BATCH_SIZE);
                 if (messages.length === 0) {
                     emptyQueueCount++;
                     console.log(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
-                    await delay(5000);
+                    await delay(5000); // Wait before checking again
                     continue;
                 }
-                emptyQueueCount = 0;
+                emptyQueueCount = 0; // Reset counter if we found messages
 
-                for (const message of messages) {
-                    try {
-                        const { url, companyName } = message.content;
-                        const jobData = await workdayJobFetch(url);
-                        if (jobData) {
-                            const data = {
-                                company_name: companyName,
-                                job_title: jobData.title,
-                                job_link: jobData.externalUrl,
-                                location: jobData.location,
-                                location_country: jobData.jobRequisitionLocation?.country.descriptor || jobData.country.descriptor,
-                                posting_date: jobData.startDate,
-                                position_id: jobData.jobReqId
-                            };
-                            if (!job_links_seen.has(data.job_link)) {
-                                job_links_seen.add(data.job_link);
-                                processedJobs.push(data);
-                            }
+                // Process all messages in the batch concurrently
+                const jobDataPromises = messages.map(async message => {
+                    const { url, companyName } = message.content;
+                    return { jobData: await workdayJobFetch(url), message, companyName };
+                });
+
+                const results = await Promise.all(jobDataPromises);
+
+                // Process the results of the batch
+                results.forEach(({ jobData, message, companyName }) => {
+                    if (jobData) {
+                        const data = {
+                            company_name: companyName,
+                            job_title: jobData.title,
+                            job_link: jobData.externalUrl,
+                            location: jobData.location,
+                            location_country: jobData.jobRequisitionLocation?.country.descriptor || jobData.country.descriptor,
+                            posting_date: jobData.startDate,
+                            position_id: jobData.jobReqId
+                        };
+                        // Only add job if we haven't seen it before
+                        if (!job_links_seen.has(data.job_link)) {
+                            job_links_seen.add(data.job_link);
+                            processedJobs.push(data);
                         }
-                        await message.ack();
-                    } catch (error) {
-                        console.error(`Error processing message in consumer ${workerId}:`, error.message);
                     }
-                }
+                    message.ack(); // Acknowledge the message as processed
+                });
 
                 console.log(`Consumer ${workerId} processed ${messages.length} messages`);
             } catch (error) {
                 console.error(`Error in consumer ${workerId}:`, error);
-                await delay(5000);
+                await delay(5000); // Wait before retrying after an error
             }
         }
         console.log(`Consumer ${workerId} finished due to empty queue`);
     };
 
+    // Function to start all consumer workers
     const consumerPromise = async () => {
         console.log("Starting consumer process...");
+        // Create and start multiple consumer workers
         const consumers = Array.from({ length: CONSUMER_COUNT }, (_, i) => consumerWorker(i + 1));
         await Promise.all(consumers);
         console.log(`All consumers finished. Processed ${processedJobs.length} jobs.`);
@@ -244,12 +264,15 @@ export const getWorkdayJobs = async (company_list) => {
     };
 
     try {
+        // Start the producer and wait for it to finish
         const producedCount = await producerPromise();
         console.log(`Producer completed. ${producedCount} jobs queued.`);
 
+        // Start the consumers and wait for them to finish
         const consumedJobs = await consumerPromise();
         console.log(`Consumers completed. ${consumedJobs.length} jobs processed.`);
 
+        // Close the connection to the message queue
         await closeConnection();
 
         return consumedJobs;
@@ -259,7 +282,6 @@ export const getWorkdayJobs = async (company_list) => {
         throw error;
     }
 }
-
 
 // export const getWorkdayJobs = async (company_list) => {
 //     const jobPostings = [];
@@ -366,4 +388,5 @@ export const getWorkdayJobs = async (company_list) => {
 //         throw error;
 //     }
 // }
+
 

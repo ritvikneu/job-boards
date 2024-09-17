@@ -60,8 +60,6 @@ class LocationChecker {
         }
     }
 
-
-
     isStatePresent(location) {
         if (this.statesMap.has(location)) {
             return true;
@@ -97,16 +95,49 @@ class FilterJobs {
         this.generateCombinations(part, r, index + 1, current, result);
     }
 
+    // /**
+    //  * Generates all possible combinations of elements in the array `parts` of length `combinationLength`.
+    //  * Uses memoization to cache results for efficiency.
+    //  * @param {Array} parts - The array of elements to generate combinations from.
+    //  * @param {number} combinationLength - The length of each combination.
+    //  * @returns {Array} - An array of combinations.
+    //  */
+    // getCombinations(parts, combinationLength) {
+    //     const cacheKey = `${parts.join(',')}-${combinationLength}`;
+    //     if (this.combinationCache.has(cacheKey)) {
+    //         return this.combinationCache.get(cacheKey);
+    //     }
+
+    //     let combinations = [];
+    //     this.generateCombinations(parts, combinationLength, 0, [], combinations);
+    //     this.combinationCache.set(cacheKey, combinations);
+    //     return combinations;
+    // }
+
+    // /**
+    //  * Recursively generates combinations of elements from `parts` of length `combinationLength`.
+    //  * @param {Array} parts - The array of elements to generate combinations from.
+    //  * @param {number} combinationLength - The length of each combination.
+    //  * @param {number} startIndex - The current index in the array `parts`.
+    //  * @param {Array} currentCombination - The current combination being built.
+    //  * @param {Array} allCombinations - The array to store all valid combinations.
+    //  */
+    // generateCombinations(parts, combinationLength, startIndex, currentCombination, allCombinations) {
+    //     if (currentCombination.length === combinationLength) {
+    //         allCombinations.push([...currentCombination]);
+    //         return;
+    //     }
+    //     if (startIndex === parts.length) return;
+    //     this.generateCombinations(parts, combinationLength, startIndex + 1, [...currentCombination, parts[startIndex]], allCombinations);
+    //     this.generateCombinations(parts, combinationLength, startIndex + 1, currentCombination, allCombinations);
+    // }
+
     async matchJobsToChecker(word, checkTitle = false, checkLocation = false, portal) {
-        let wordParts = [];
-
-        wordParts = word.split(' ').map(part => part.trim().toLowerCase());
-
+        let wordParts = word.split(' ').map(part => part.trim().toLowerCase());
 
         const validParts = wordParts
             .filter(part => part)
             .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
-
 
         if (validParts.length === 0 || validParts.length > 20) return false;
 
@@ -123,13 +154,9 @@ class FilterJobs {
                     }
                 }
                 if (checkLocation) {
-                    if (this.locationChecker.isCountryPresent(searchWord)) {
-                        return true;
-                    }
-                    if (this.locationChecker.isStatePresent(searchWord)) {
-                        return true;
-                    }
-                    if (this.locationChecker.isStateAbbrPresent(searchWord)) {
+                    if (this.locationChecker.isCountryPresent(searchWord) ||
+                        this.locationChecker.isStatePresent(searchWord) ||
+                        this.locationChecker.isStateAbbrPresent(searchWord)) {
                         return true;
                     }
                 }
@@ -152,11 +179,11 @@ class FilterJobs {
 
 }
 
-const titleChecker = new TitleChecker();
-const locationChecker = new LocationChecker();
-const filterJob = new FilterJobs();
+// const titleChecker = new TitleChecker();
+// const locationChecker = new LocationChecker();
+// const filterJob = new FilterJobs();
 
-export { titleChecker, locationChecker, filterJob };
+// export { titleChecker, locationChecker, filterJob };
 export { TitleChecker, LocationChecker, FilterJobs }
 
 
