@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
+import pLimit from 'p-limit';
 
 import * as dynamoService from "./dynamo-service.js";
 
@@ -14,7 +15,8 @@ config();
 import { FilterJobs } from './filtering-service.js';
 const filterJob = new FilterJobs();
 
-const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
+const CONCURRENCY_LIMIT = parseInt(process.env.CONCURRENCY_LIMIT, 10) || 5; // Default to 5 if not set
+const limit = pLimit(CONCURRENCY_LIMIT);
 
 const fileName = process.env.FILE_LEVER
 
@@ -43,53 +45,47 @@ export const getAllCompanies = async () => {
 
 export const getLeverJobs = async () => {
     const company_list = await getAllCompanies();
-    let job_links_seen = new Set();
-    // create a list of greenhouse companies intialize to empty
     logger.info("Inside get lever jobs");
     console.log("inside get lever jobs");
-    let lever_list = [];
-    for (let i = 0; i < company_list.length; i++) {
-        let company = company_list[i];
-        let response = null;
-        try {
-            response = await axios.get(company.link);
-            const headers = response.headers;
-            // Calculate the size of the headers in bytes
-            const headerSize = JSON.stringify(headers).length;
-            // console.log(company.name + " success" + response.status + " " + headerSize)
-            if (response.status == 200) {
-                const htmlDom = new jsdom.JSDOM(response.data);
-                // Assuming 'htmlDom' is your document object
-                const postings = htmlDom.window.document.querySelectorAll('.posting');
-                postings.forEach(posting => {
-                    // Retrieve the href attribute of the posting-title
-                    const postingTitleHref = posting.querySelector('.posting-title').getAttribute('href');
-                    // Retrieve the text content of the posting-name h5 element
-                    const postingNameText = posting.querySelector('.posting-title h5').textContent;
-                    // Retrieve the text content of the sort-by-location span element
-                    const locationText = posting.querySelector('.sort-by-location').textContent;
-                    let data = {
-                        "company_name": company.name,
-                        "job_title": postingNameText,
-                        "job_link": postingTitleHref,
-                        "location": locationText,
-                        "position_id": postingTitleHref.split('/')[4]
-                    }
-                    lever_list.push(data);
-                });
+
+    const lever_list = await Promise.all(company_list.map(company => 
+        limit(async () => {
+            try {
+                const response = await axios.get(company.link);
+                const headers = response.headers;
+                const headerSize = JSON.stringify(headers).length;
+
+                if (response.status == 200) {
+                    const htmlDom = new jsdom.JSDOM(response.data);
+                    const postings = htmlDom.window.document.querySelectorAll('.posting');
+                    const companyJobs = Array.from(postings).map(posting => {
+                        const postingTitleHref = posting.querySelector('.posting-title').getAttribute('href');
+                        const postingNameText = posting.querySelector('.posting-title h5').textContent;
+                        const locationText = posting.querySelector('.sort-by-location').textContent;
+                        return {
+                            "company_name": company.name,
+                            "job_title": postingNameText,
+                            "job_link": postingTitleHref,
+                            "location": locationText,
+                            "position_id": postingTitleHref.split('/')[4]
+                        };
+                    });
+                    return companyJobs;
+                } else {
+                    console.log(`Lever link: ${company.link}, error: ${response.status}`);
+                    logger.info(`Lever link: ${company.link}, error: ${response.status}`);
+                    return [];
+                }
+            } catch (err) {
+                console.log(`Lever link: ${company.link}, error: ${err.message}`);
+                logger.info(`Lever link: ${company.link}, error: ${err.message}`);
+                return [];
             }
-            else {
-                console.log(`Failed Lever on company: ${company.link}`);
-                logger.info(`Failed Lever on company: ${company.link}`);
-            }
-        }
-        catch (err) {
-            response = null;
-            console.log(`Failed Lever on company: ${company.link}`);
-            logger.info(`Failed Lever on company link: ${company.link}`);
-        }
-    }
-    return lever_list;
+        })
+    ));
+
+    // Flatten the array of arrays into a single array
+    return lever_list.flat();
 }
 
 export const filterLeverJobs = async () => {
@@ -121,8 +117,8 @@ export const filterLeverJobs = async () => {
                 }
             }
         } catch (error) {
-            console.log(`Failed to filter Lever Job: ${data.job_link}`);
-            logger.info(`Failed to filter Lever Job: ${data.job_link}`);
+            console.log(`lever link: ${data.job_link}, error: ${error.message}`);
+            logger.info(`lever link: ${data.job_link}, error: ${error.message}`);
         }
         return null;
     });
@@ -139,50 +135,6 @@ export const filterLeverJobs = async () => {
         return new Date(b.posting_date) - new Date(a.posting_date);
     }
     );
-    return filtered_lever_list;
-}
-
-export const filterLeverJobs_normal = async () => {
-    const lever_list = await getLeverJobs();
-    const filtered_lever_list = [];
-    console.log("inside filter lever jobs");
-    logger.info("Inside filter lever jobs");
-    let count = 0
-
-    const filter_lever = lever_list.map(async data => {
-
-        let lever_job_link = data["job_link"];
-        let posting_date = await getJobPostingDates(lever_job_link);
-        data["posting_date"] = posting_date;
-
-        let location_to_check = data["location"];
-        location_to_check = location_to_check.toLowerCase();
-        const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
-
-        if (location_matched) {
-            let title_to_check = data["job_title"];
-            title_to_check = title_to_check.toLowerCase();
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-
-            if (title_matched) {
-
-                if (posting_date && await filterJob.postingDateChecker(posting_date)) {
-                    return data;
-                }
-            }
-        }
-        return null;
-    });
-
-    // Wait for all promises to resolve
-    filtered_lever_list = await Promise.all(filter_lever);
-
-    // Filter out null values and add valid items to the filtered list and sort by posting date 
-    filtered_lever_list.filter(job => job !== null).sort((a, b) => {
-        return new Date(b.posting_date) - new Date(a.posting_date);
-    }
-    );
-
     return filtered_lever_list;
 }
 
@@ -303,3 +255,49 @@ export const filterLeverJobswithDynamo = async () => {
     logger.info("Time taken to filter Lever Jobs: " + (Date.now() - startTimer) / 1000 + " seconds");
     return filtered_lever_list;
 }
+
+
+// export const filterLeverJobs_normal = async () => {
+//     const lever_list = await getLeverJobs();
+//     const filtered_lever_list = [];
+//     console.log("inside filter lever jobs");
+//     logger.info("Inside filter lever jobs");
+//     let count = 0
+
+//     const filter_lever = lever_list.map(async data => {
+
+//         let lever_job_link = data["job_link"];
+//         let posting_date = await getJobPostingDates(lever_job_link);
+//         data["posting_date"] = posting_date;
+
+//         let location_to_check = data["location"];
+//         location_to_check = location_to_check.toLowerCase();
+//         const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
+
+//         if (location_matched) {
+//             let title_to_check = data["job_title"];
+//             title_to_check = title_to_check.toLowerCase();
+//             const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
+
+//             if (title_matched) {
+
+//                 if (posting_date && await filterJob.postingDateChecker(posting_date)) {
+//                     return data;
+//                 }
+//             }
+//         }
+//         return null;
+//     });
+
+//     // Wait for all promises to resolve
+//     filtered_lever_list = await Promise.all(filter_lever);
+
+//     // Filter out null values and add valid items to the filtered list and sort by posting date 
+//     filtered_lever_list.filter(job => job !== null).sort((a, b) => {
+//         return new Date(b.posting_date) - new Date(a.posting_date);
+//     }
+//     );
+
+//     return filtered_lever_list;
+// }
+
