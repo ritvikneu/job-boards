@@ -12,6 +12,8 @@ const filterJob = new FilterJobs();
 import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
+let page_number = 1;
+
 async function getDiceJobs(queryParams) {
     const baseUrl = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
     const url = new URL(baseUrl);
@@ -49,7 +51,7 @@ async function getDiceJobs(queryParams) {
 // Call the function to get the Dice jobs
 export const diceJobsFetch = async () => {
     const queryParams = {
-        page: 1,
+        page: page_number,
         pageSize: 1000,
         facets: ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
         'filters.employmentType': 'FULLTIME',
@@ -71,7 +73,9 @@ export const diceJobsFetch = async () => {
 }
 
 
-export const filterDiceJobs = async () => {
+export const filterDiceJobs = async (page) => {
+    page_number = page;
+    console.log(page_number)
     const allDiceJobs = await diceJobsFetch();
     const filteredJobs = [];
     const job_links_seen = new Set();
@@ -108,7 +112,7 @@ export const filterDiceJobs = async () => {
     filteredJobs.sort((a, b) => {
         return a.company_name.localeCompare(b.company_name);
     });
-    fileHandler.writeToExcel(filteredJobs, 'dice');
+    fileHandler.writeToExcel(filteredJobs, `dice${page_number}`);
     return filteredJobs;
     // writeToExcel(filteredJobs, 'dice');
     // console.log("filterDiceJobs", filterDiceJobs);

@@ -34,7 +34,8 @@ export const getWorkday = async (request, response) => {
 }
 
 export const getDice = async (request, response) => { 
-    const res = await diceService.filterDiceJobs();
+    let page_number = request.body.page_number || 1;
+    const res = await diceService.filterDiceJobs(page_number);
     response.json({message: res});
 }
 

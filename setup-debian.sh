@@ -44,7 +44,8 @@ echo "cd to job-boards to install node modules"
 cd /opt/job-boards
 sudo npm install
 
-
+# docker for rabbitmq
+# docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
 
 
 

@@ -214,7 +214,6 @@ export const getWorkdayJobs = async (company_list) => {
                     continue;
                 }
                 emptyQueueCount = 0; // Reset counter if we found messages
-
                 // Process all messages in the batch concurrently
                 const jobDataPromises = messages.map(async message => {
                     const { url, companyName } = message.content;

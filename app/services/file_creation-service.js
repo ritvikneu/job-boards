@@ -84,6 +84,7 @@ class FileHandler {
     writeToCsv(data, listing) {
         const header = ['Company Name', 'Job Title', 'Link', 'Location', 'Posting Date', 'Job ID'];
         this.csvData.push(header);
+        
 
         data.forEach(row => {
             this.csvData.push([row["company_name"], row["job_title"], row["job_link"], row["location"], row["posting_date"], row["position_id"]]);
