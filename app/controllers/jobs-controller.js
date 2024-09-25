@@ -1,6 +1,7 @@
 
 import * as ghService from "../services/greenhouse_v2-service.js";
 import * as leverService from "../services/lever-service.js";
+import * as ashService from "../services/ash-service.js";
 import * as wday from "../services/wday-rabbit.js";
 import * as diceService from "../services/dice-service.js";
 import * as oraCloudService from "../services/oraclecloud-service.js";
@@ -23,6 +24,11 @@ export const getGreenhouse = async (request, response) => {
 
 export const getLever = async (request, response) => { 
     const res = await leverService.getFilteredLeverJobs();
+    response.json({message: res});
+}
+
+export const getAsh = async (request, response) => { 
+    const res = await ashService.getFilteredAshJobs();
     response.json({message: res});
 }
 
