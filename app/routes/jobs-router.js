@@ -22,6 +22,8 @@ router.route('/latest')
         .get(jobsController.getLatestJobs);
 router.route('/health')
         .get(jobsController.HealthCheck);
+router.route('/ash')
+        .get(jobsController.getAsh);
 
 
 export default router;
