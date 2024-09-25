@@ -192,7 +192,7 @@ export const getWorkdayJobs = async (company_list) => {
         }));
 
         // Queue all job URLs for processing
-        await producer(jobUrls);
+        await producer(jobUrls, fileName);
         console.log(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
 
         return jobUrls.length;
@@ -243,13 +243,13 @@ export const getWorkdayJobs = async (company_list) => {
                     message.ack(); // Acknowledge the message as processed
                 });
 
-                console.log(`Consumer ${workerId} processed ${messages.length} messages`);
+                // console.log(`Consumer ${workerId} processed ${messages.length} messages`);
             } catch (error) {
                 console.error(`Error in consumer ${workerId}:`, error);
                 await delay(5000); // Wait before retrying after an error
             }
         }
-        console.log(`Consumer ${workerId} finished due to empty queue`);
+        // console.log(`Consumer ${workerId} finished due to empty queue`);
     };
 
     // Function to start all consumer workers
@@ -281,111 +281,3 @@ export const getWorkdayJobs = async (company_list) => {
         throw error;
     }
 }
-
-// export const getWorkdayJobs = async (company_list) => {
-//     const jobPostings = [];
-//     const job_links_seen = new Set();
-//     const processedJobs = [];
-
-//     const producerPromise = async () => {
-//         console.log("Starting producer process...");
-//         const fetchJobsForCompany = async (company) => {
-//             let offset = 0;
-//             while (offset < WORKDAY_OFFSET) {
-//                 const jobs = await workdayFetch(company.link, offset, company.name);
-//                 jobPostings.push(...jobs);
-//                 if (jobs.length < 20) break;
-//                 offset += 20;
-//             }
-//         }
-
-//         for (let i = 0; i < company_list.length; i += CONCURRENCY_LIMIT) {
-//             const batch = company_list.slice(i, i + CONCURRENCY_LIMIT);
-//             await Promise.all(batch.map(fetchJobsForCompany));
-//         }
-
-//         const jobUrls = jobPostings.map(job => ({
-//             url: job.baseURL.slice(0, -5) + job.externalPath,
-//             companyName: job.companyName
-//         }));
-//         await producer(jobUrls);
-//         console.log(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
-//         return jobUrls.length;
-//     };
-
-//     const consumerWorker = async (workerId) => {
-//         console.log(`Consumer ${workerId} started`);
-//         let emptyQueueCount = 0;
-//         while (emptyQueueCount < 3) { // Stop after 3 consecutive empty queue results
-//             try {
-//                 const messages = await getNextMessages(BATCH_SIZE);
-//                 if (messages.length === 0) {
-//                     emptyQueueCount++;
-//                     console.log(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
-//                     await delay(5000); // Wait for 5 seconds before retrying
-//                     continue;
-//                 }
-//                 emptyQueueCount = 0; // Reset the counter if we got messages
-
-//                 for (const message of messages) {
-//                     try {
-//                         const { url, companyName } = message.content;
-//                         const jobData = await workdayJobFetch(url);
-//                         if (jobData) {
-//                             const data = {
-//                                 company_name: companyName,
-//                                 job_title: jobData.title,
-//                                 job_link: jobData.externalUrl,
-//                                 location: jobData.location,
-//                                 location_country: jobData.jobRequisitionLocation?.country.descriptor || jobData.country.descriptor,
-//                                 posting_date: jobData.startDate,
-//                                 position_id: jobData.jobReqId
-//                             };
-//                             if (!job_links_seen.has(data.job_link)) {
-//                                 job_links_seen.add(data.job_link);
-//                                 processedJobs.push(data);
-//                             }
-//                         }
-//                         await message.ack();
-//                     } catch (error) {
-//                         console.error(`Error processing message in consumer ${workerId}:`, error);
-//                         // Optionally, you could implement a retry mechanism here
-//                     }
-//                 }
-
-//                 console.log(`Consumer ${workerId} processed ${messages.length} messages`);
-//             } catch (error) {
-//                 console.error(`Error in consumer ${workerId}:`, error);
-//                 await delay(5000); // Wait before retrying
-//             }
-//         }
-//         console.log(`Consumer ${workerId} finished due to empty queue`);
-//     };
-
-
-//     const consumerPromise = async () => {
-//         console.log("Starting consumer process...");
-//         const consumers = Array.from({ length: CONSUMER_COUNT }, (_, i) => consumerWorker(i + 1));
-//         await Promise.all(consumers);
-//         console.log(`All consumers finished. Processed ${processedJobs.length} jobs.`);
-//         return processedJobs;
-//     };
-
-//     try {
-//         const producedCount = await producerPromise();
-//         console.log(`Producer completed. ${producedCount} jobs queued.`);
-
-//         const consumedJobs = await consumerPromise();
-//         console.log(`Consumers completed. ${consumedJobs.length} jobs processed.`);
-
-//         await closeConnection();
-
-//         return consumedJobs;
-//     } catch (error) {
-//         console.error('Error in job processing:', error);
-//         logger.error('Error in job processing:', error);
-//         throw error;
-//     }
-// }
-
-
