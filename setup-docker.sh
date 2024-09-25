@@ -30,13 +30,17 @@ building docker image
 # running docker container
 # docker run -d --name=jobs -p 8080:7777 ritvikdocker/jb:2.0
 
-docker run -d -p 8081:5000 -e PORT=5000 --platform linux/amd64 OPENAI_API_KEY=sk-proj-tT4HWEe0wbFvnCsAkYqyT3BlbkFJLNf8FSZ3QiSAuOKf7hMH ritvikdocker/flask-blog-post-generator
+docker run -d -p 8081:5000 -e PORT=5000 --platform linux/amd64 OPENAI_API_KEY= ritvikdocker/flask-blog-post-generator
 
-docker run -p 8081:5000 -e PORT=5000 -e OPENAI_API_KEY=sk-proj-tT4HWEe0wbFvnCsAkYqyT3BlbkFJLNf8FSZ3QiSAuOKf7hMH ritvikdocker/flask-blog-post-generator
+docker run -p 8081:5000 -e PORT=5000 -e OPENAI_API_KEY= ritvikdocker/flask-blog-post-generator
 
 docker run -d -p 8081:5000 --env-file .env --platform linux/amd64 ritvikdocker/flask-blog-post-generator
 
-docker run -p 8081:5000 -e PORT=5000 -e OPENAI_API_KEY=sk-proj-tT4HWEe0wbFvnCsAkYqyT3BlbkFJLNf8FSZ3QiSAuOKf7hMH ritvikdocker/flask-journal-pilot
+docker run -p 8081:5000 -e PORT=5000 -e OPENAI_API_KEY= ritvikdocker/flask-journal-pilot
 
 
 docker tag flask-journal-pilot:latest ritvikdocker/flask-journal-pilot:latest
+
+
+# docker for rabbitmq
+# docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management

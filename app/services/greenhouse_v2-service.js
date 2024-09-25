@@ -43,12 +43,9 @@ export const getAllCompanies = async () => {
     const baseGreenUrl = "https://job-boards.greenhouse.io/";
     const greenUrl = EMBED ? `${baseGreenUrl}embed/job_board?for=` : baseGreenUrl;
     fileName = EMBED ? process.env.FILE_EMBED : process.env.FILE_GH;
-
-
     const csvFile = `app/companies/greenhouse/${fileName}.csv`;
     const csvData = readFileSync(csvFile, 'utf8');
     const rows = csvData.split('\n').map(row => row.toLowerCase().trim()).filter(row => row.length > 0);
-
     const company_set = new Set(rows);
     const company_list = Array.from(company_set).map(companyName => ({
         name: companyName,
@@ -182,7 +179,6 @@ export const filterGreenHouseJobs = async () => {
             if (!data || !data.job_link) {
                 return null;
             }
-    
             const location_to_check = data.location.toLowerCase();
             const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
     
