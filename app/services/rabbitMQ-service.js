@@ -1,6 +1,6 @@
 import amqp from 'amqplib';
 
-let QUEUE_NAME = "workday-queue-1";
+let QUEUE_NAME = "workday-queue-2";
 const EXCHANGE_NAME = "boards-exchange";
 const ROUTING_KEY = "boards";
 
@@ -36,6 +36,10 @@ async function setupRabbitMQ() {
 setupRabbitMQ();
 
 export const producer = async (sublinks,qname) => {
+  // Queue name is qname + epoch time
+  QUEUE_NAME = qname+Date.now().toString();
+  await channel.assertQueue(QUEUE_NAME, { durable: true });
+  await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
   // create a new queue for each company
   try {
     for (const link of sublinks) {
