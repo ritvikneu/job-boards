@@ -16,7 +16,7 @@ let fileName = process.env.FILE_WDAY;
 const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 let ERROR_COUNT = 0
-const CONSUMER_COUNT = 5; // Number of concurrent consumers
+let CONSUMER_COUNT = 5; // Number of concurrent consumers
 const BATCH_SIZE = 200; // Number of messages to process in each batch
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -81,7 +81,8 @@ export const filterWorkDayJobs = async (file_name) => {
 
     filteredJobs = filteredJobs.filter(job => job !== null).sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
     console.log("Filtered workday jobs: " + filteredJobs.length);
-    console.log("ERRORCOUNT", ERROR_COUNT);
+    console.log("ERRORCOUNT------", ERROR_COUNT);
+    console.log("RATE_LIMIT_COUNT------", rate_limit_count);
     fileHandler.writeToExcel(filteredJobs, fileName);
 
     console.log("Duration of workday jobs: " + (Date.now() - startTime) / 1000 + " seconds");
@@ -202,15 +203,15 @@ export const getWorkdayJobs = async (company_list) => {
     const consumerWorker = async (workerId) => {
         console.log(`Consumer ${workerId} started`);
         let emptyQueueCount = 0;
-        // Continue processing until we've seen an empty queue 3 times in a row
-        while (emptyQueueCount < 3) {
+        // Continue processing until we've seen an empty queue 2 times in a row
+        while (emptyQueueCount < 2) {
             try {
                 // Fetch a batch of messages from the queue
                 const messages = await getNextMessages(BATCH_SIZE);
                 if (messages.length === 0) {
                     emptyQueueCount++;
                     console.log(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
-                    await delay(5000); // Wait before checking again
+                    await delay(3000); // Wait before checking again
                     continue;
                 }
                 emptyQueueCount = 0; // Reset counter if we found messages
@@ -252,9 +253,13 @@ export const getWorkdayJobs = async (company_list) => {
         // console.log(`Consumer ${workerId} finished due to empty queue`);
     };
 
+
     // Function to start all consumer workers
     const consumerPromise = async () => {
         console.log("Starting consumer process...");
+        // setup dynamic consumer count based on producer count
+        CONSUMER_COUNT = Math.ceil(jobPostings.length / 1000) + 1;
+        console.log("CONSUMER_COUNT", CONSUMER_COUNT);
         // Create and start multiple consumer workers
         const consumers = Array.from({ length: CONSUMER_COUNT }, (_, i) => consumerWorker(i + 1));
         await Promise.all(consumers);
