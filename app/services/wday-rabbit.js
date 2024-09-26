@@ -7,7 +7,7 @@ import { FileHandler } from './file_creation-service.js';
 const fileHandler = new FileHandler();
 
 import { FilterJobs, LocationChecker } from './filtering-service.js';
-import { logger } from '../middleware/logger.js';
+// import { logger } from '../middleware/logger.js';
 const filterJob = new FilterJobs();
 const locationChecker = new LocationChecker();
 import { producer, getNextMessages, closeConnection, consusmerBatch } from './rabbitMQ-service.js';
@@ -17,12 +17,15 @@ const WORKDAY_OFFSET = parseInt(process.env.WORKDAY_OFFSET) || 200;
 const CONCURRENCY_LIMIT = process.env.CONCURRENCY_LIMIT; // Number of concurrent requests
 let ERROR_COUNT = 0
 let CONSUMER_COUNT = 5; // Number of concurrent consumers
-const BATCH_SIZE = 200; // Number of messages to process in each batch
+const BATCH_SIZE = 150; // Number of messages to process in each batch
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 import Bottleneck from 'bottleneck';
 
 let rate_limit_count = 0;
+
+import { createCustomLogger } from '../middleware/logger.js';
+const logger = createCustomLogger(fileName);
 
 
 export const getAllCompaniesJson = async () => {
@@ -40,7 +43,7 @@ export const getAllCompaniesJson = async () => {
             }
         } catch (error) {
             console.log("Error in parsing company names:", company);
-            logger.error("Error in parsing company names:", company);
+            logger.error(`Error in parsing company names: ${company}`);
         }
         return acc;
     }, []);
@@ -80,13 +83,14 @@ export const filterWorkDayJobs = async (file_name) => {
     let filteredJobs = await Promise.all(jobPosting);
 
     filteredJobs = filteredJobs.filter(job => job !== null).sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
-    console.log("Filtered workday jobs: " + filteredJobs.length);
-    console.log("ERRORCOUNT------", ERROR_COUNT);
-    console.log("RATE_LIMIT_COUNT------", rate_limit_count);
+    console.log(`Filtered workday jobs: ${filteredJobs.length}`);
+    console.log(`ERRORCOUNT------ ${ERROR_COUNT}`);
+    // rate limit count in seconds  
+    console.log(`RATE_LIMIT_COUNT------ ${rate_limit_count / 60}`);
     fileHandler.writeToExcel(filteredJobs, fileName);
 
-    console.log("Duration of workday jobs: " + (Date.now() - startTime) / 1000 + " seconds");
-    logger.info("Duration of workday jobs: " + (Date.now() - startTime) / 1000 + " seconds");
+    console.log(`Duration of workday jobs: ${((Date.now() - startTime) / 1000)} seconds`);
+    logger.info(`Duration of workday jobs: ${((Date.now() - startTime) / 1000)} seconds`);
 
     return filteredJobs;
 }
@@ -121,8 +125,8 @@ export const workdayFetch = async (url, offset, companyName, retries = 3) => {
             await delay(10000); // Wait for 10 seconds
             return workdayFetch(url, offset, companyName, retries - 1); // Retry
         }
-        console.log('Error in fetching jobs:', companyName, error.message);
-        logger.error('Error in fetching jobs:', error.message);
+        console.log(`Error in fetching jobs: ${companyName} --- ${error.message}`);
+        logger.error(`Error in fetching jobs: ${companyName} --- ${error.message}`);
         return [];
     }
 }
@@ -134,7 +138,9 @@ export const workdayJobFetch = async (url, retries = 3) => {
     try {
         const response = await axios.get(url);
         const endTime = Date.now();
+        // count the timeSpent in seconds
         const timeSpent = (endTime - startTime) / 1000;
+        // count the rate limit in seconds
         rate_limit_count += timeSpent;
         return response.data.jobPostingInfo || null;
     } catch (error) {
@@ -142,12 +148,12 @@ export const workdayJobFetch = async (url, retries = 3) => {
             // delay for an exponential time every time we hit rate limit
             let delay_time = Math.pow(2, 3 - retries) * 20000;
             // console.log(`Rate limited in workdayJobFetch. Waited for ${delay_time} seconds before retry. Retries left: ${retries}`);
-            await delay(delay_time); // Wait for 10 seconds
+            await delay(delay_time); // Wait for 20 seconds
             return workdayJobFetch(url, retries - 1); // Retry with one less retry attempt
         }
         ERROR_COUNT++;
-        console.log('Error fetching single job:', url, error.message);
-        logger.error('Error fetching single job:', url, error.message);
+        console.log(`Error fetching single job: ${url} --- ${error.message}`);
+        logger.error(`Error fetching single job: ${url} --- ${error.message}`);
         return null;
     }
 }
@@ -166,8 +172,8 @@ export const getWorkdayJobs = async (company_list) => {
 
     // Producer function to fetch job listings and queue them for processing
     const producerPromise = async () => {
-        console.log("Starting producer process...");
-
+        console.log(`Starting producer process...`);
+        logger.info(`Starting producer process...`);
         // Helper function to fetch jobs for a single company
         const fetchJobsForCompany = async (company) => {
             let offset = 0;
@@ -192,9 +198,14 @@ export const getWorkdayJobs = async (company_list) => {
             companyName: job.companyName
         }));
 
+        // shuffle the jobUrls array - 
+        // helps in distributing the jobs from a single company across different consumers
+        jobUrls.sort(() => 0.5 - Math.random());
+
         // Queue all job URLs for processing
         await producer(jobUrls, fileName);
         console.log(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
+        logger.info(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
 
         return jobUrls.length;
     };
@@ -202,6 +213,7 @@ export const getWorkdayJobs = async (company_list) => {
     // Consumer worker function to process queued jobs
     const consumerWorker = async (workerId) => {
         console.log(`Consumer ${workerId} started`);
+        logger.info(`Consumer ${workerId} started`);
         let emptyQueueCount = 0;
         // Continue processing until we've seen an empty queue 2 times in a row
         while (emptyQueueCount < 2) {
@@ -211,7 +223,8 @@ export const getWorkdayJobs = async (company_list) => {
                 if (messages.length === 0) {
                     emptyQueueCount++;
                     console.log(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
-                    await delay(3000); // Wait before checking again
+                    logger.info(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
+                    await delay(2000); // Wait before checking again
                     continue;
                 }
                 emptyQueueCount = 0; // Reset counter if we found messages
@@ -246,8 +259,9 @@ export const getWorkdayJobs = async (company_list) => {
 
                 // console.log(`Consumer ${workerId} processed ${messages.length} messages`);
             } catch (error) {
-                console.error(`Error in consumer ${workerId}:`, error);
-                await delay(5000); // Wait before retrying after an error
+                console.error(`Error in consumer ${workerId}:`, error.message);
+                logger.error(`Error in consumer ${workerId}:`, error.message);
+                await delay(7000); // Wait before retrying after an error
             }
         }
         // console.log(`Consumer ${workerId} finished due to empty queue`);
@@ -258,12 +272,14 @@ export const getWorkdayJobs = async (company_list) => {
     const consumerPromise = async () => {
         console.log("Starting consumer process...");
         // setup dynamic consumer count based on producer count
-        CONSUMER_COUNT = Math.ceil(jobPostings.length / 1000) + 1;
+        CONSUMER_COUNT = Math.ceil(jobPostings.length / 1500) + 1;
+        CONSUMER_COUNT = CONSUMER_COUNT > 10 ? 10 : CONSUMER_COUNT;
         console.log("CONSUMER_COUNT", CONSUMER_COUNT);
         // Create and start multiple consumer workers
         const consumers = Array.from({ length: CONSUMER_COUNT }, (_, i) => consumerWorker(i + 1));
         await Promise.all(consumers);
         console.log(`All consumers finished. Processed ${processedJobs.length} jobs.`);
+        logger.info(`All consumers finished. Processed ${processedJobs.length} jobs.`);
         return processedJobs;
     };
 
@@ -271,18 +287,18 @@ export const getWorkdayJobs = async (company_list) => {
         // Start the producer and wait for it to finish
         const producedCount = await producerPromise();
         console.log(`Producer completed. ${producedCount} jobs queued.`);
-
+        logger.info(`Producer completed. ${producedCount} jobs queued.`);
         // Start the consumers and wait for them to finish
         const consumedJobs = await consumerPromise();
         console.log(`Consumers completed. ${consumedJobs.length} jobs processed.`);
-
+        logger.info(`Consumers completed. ${consumedJobs.length} jobs processed.`);
         // Close the connection to the message queue
-        await closeConnection();
+        await closeConnection(fileName);
 
         return consumedJobs;
     } catch (error) {
-        console.error('Error in job processing:', error);
-        logger.error('Error in job processing:', error);
+        console.error(`Error in job processing: ${error.message}`);
+        logger.error(`Error in job processing: ${error.message}`);
         throw error;
     }
 }
