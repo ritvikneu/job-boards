@@ -37,7 +37,7 @@ setupRabbitMQ();
 
 export const producer = async (sublinks,qname) => {
   // Queue name is qname + epoch time
-  QUEUE_NAME = qname+Date.now().toString();
+  QUEUE_NAME = qname;
   await channel.assertQueue(QUEUE_NAME, { durable: true });
   await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
   // create a new queue for each company
@@ -122,9 +122,11 @@ export const consumer = async (filterFunction) => {
   }
 };
 
-export const closeConnection = async () => {
+export const closeConnection = async (qname) => {
     try {
       if (channel) await channel.close();
+      // delete the queue
+      await channel.deleteQueue(qname);
       if (connection) await connection.close();
       console.log('RabbitMQ connection closed');
     } catch (error) {
