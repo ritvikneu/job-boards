@@ -1,4 +1,3 @@
-
 # create a VPC with 3 public and 3 private subnets
 resource "aws_vpc" "vpc_tf" {
   cidr_block           = var.cidr_block
@@ -73,64 +72,66 @@ resource "aws_route_table_association" "private_route_table_association" {
   route_table_id = aws_route_table.private_route_table[count.index].id
 }
 
-# create rds parameters group to be used for postgres
-resource "aws_db_parameter_group" "db_parameter_group" {
-  name   = "db-parameter-group"
-  family = "postgres15"
-  tags = {
-    Name = "${var.prefix_name}-db-parameter-group"
-  }
-}
+# # create rds parameters group to be used for postgres
+# resource "aws_db_parameter_group" "db_parameter_group" {
+#   name   = "db-parameter-group"
+#   family = "postgres15"
+#   tags = {
+#     Name = "${var.prefix_name}-db-parameter-group"
+#   }
+# }
 
-# Create an rds instance in private subnet for postgres
-resource "aws_db_subnet_group" "db_subnet_group" {
-  name       = "db_subnet_group"
-  subnet_ids = aws_subnet.private_subnet[*].id
-  tags = {
-    Name = "${var.prefix_name}-db-subnet-group"
-  }
-}
+# # Create an rds instance in private subnet for postgres
+# resource "aws_db_subnet_group" "db_subnet_group" {
+#   name       = "db_subnet_group"
+#   subnet_ids = aws_subnet.private_subnet[*].id
+#   tags = {
+#     Name = "${var.prefix_name}-db-subnet-group"
+#   }
+# }
 
-# create postgres db security group
-resource "aws_security_group" "db_sg" {
-  name        = "db_sg"
-  description = "security group for postgres db"
-  vpc_id      = aws_vpc.vpc_tf.id
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${var.prefix_name}-db-sg"
-  }
-}
+# # create postgres db security group
+# resource "aws_security_group" "db_sg" {
+#   name        = "db_sg"
+#   description = "security group for postgres db"
+#   vpc_id      = aws_vpc.vpc_tf.id
+#   ingress {
+#     from_port   = 5432
+#     to_port     = 5432
+#     protocol    = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+#   tags = {
+#     Name = "${var.prefix_name}-db-sg"
+#   }
+# }
 
-# create an rds instance in private subnet for postgres
-resource "aws_db_instance" "db_instance" {
-  allocated_storage      = 10
-  engine                 = "postgres"
-  engine_version         = "15"
-  instance_class         = "db.t3.micro"
-  db_name                = "postgres"
-  username               = "postgres"
-  password               = "postgres"
-  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.id
-  vpc_security_group_ids = [aws_security_group.db_sg.id]
-  parameter_group_name   = aws_db_parameter_group.db_parameter_group.id
-  skip_final_snapshot    = true
-  publicly_accessible    = true
-  tags = {
-    Name = "${var.prefix_name}-db"
-  }
-}
+# # create an rds instance in private subnet for postgres
+# resource "aws_db_instance" "db_instance" {
+#   allocated_storage      = 10
+#   engine                 = "postgres"
+#   engine_version         = "15"
+#   instance_class         = "db.t3.micro"
+#   db_name                = "postgres"
+#   username               = "postgres"
+#   password               = "postgres"
+#   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.id
+#   vpc_security_group_ids = [aws_security_group.db_sg.id]
+#   parameter_group_name   = aws_db_parameter_group.db_parameter_group.id
+#   skip_final_snapshot    = true
+#   publicly_accessible    = true
+#   tags = {
+#     Name = "${var.prefix_name}-db"
+#   }
+# }
+
+
 
 # create a Iam role for the instances
 resource "aws_iam_role" "aws_ec2_role" {
@@ -189,6 +190,12 @@ resource "aws_security_group" "instance_sg" {
   tags = {
     Name = "${var.prefix_name}-instance-sg"
   }
+}
+
+# attach cloudwatch agent policy to the ec2 iam role
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.aws_ec2_role.name
 }
 
 # create Ec2 instances
