@@ -319,7 +319,7 @@ resource "aws_launch_template" "ec2_launch_template" {
       volume_type           = "gp2"
     }
   }
-  disable_api_termination = true
+  disable_api_termination = false
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -368,6 +368,9 @@ resource "aws_autoscaling_policy" "scale_down_policy" {
   cooldown               = 60
   autoscaling_group_name = aws_autoscaling_group.asg.name
 }
+
+
+# 
 
 output "ami_id" {
   value = var.ami_id

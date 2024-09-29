@@ -28,14 +28,19 @@ export const getFilteredGreenHouseJobs = async (embed) => {
     const startTimer = new Date();
 
     console.log("Start filtering greenhouse jobs:", startTimer);
+    logger.info(`Start filtering greenhouse jobs: ${startTimer}`);
     const filtered_greenhouse_list = await filterGreenHouseJobs();
 
     console.log("Filtering started for Greenhouse Jobs:", new Date());
+    logger.info(`Filtering started for Greenhouse Jobs: ${new Date()}`);
     console.log("Number of jobs after filtering:", filtered_greenhouse_list.length);
+    logger.info(`Number of jobs after filtering: ${filtered_greenhouse_list.length}`);
     fileHandler.writeToExcel(filtered_greenhouse_list, fileName);
     // total number of jobs filtered
     console.log(filtered_greenhouse_list.length);
+    logger.info(`Number of jobs after filtering: ${filtered_greenhouse_list.length}`);
     console.log("Time taken to filter Greenhouse Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
+    logger.info(`Time taken to filter Greenhouse Jobs: : ${(Date.now() - startTimer) / 1000} seconds`);
     return filtered_greenhouse_list;
 }
 
@@ -58,7 +63,7 @@ export const getAllCompanies = async () => {
 }
 
 export const getGreenHouseJobs = async () => {
-    console.log("inside get greenhouse jobs");
+    logger.info(`Inside get greenhouse jobs`);
 
     const company_list = await getAllCompanies();
     const greenhouse_list = [];
@@ -83,6 +88,7 @@ export const getGreenHouseJobs = async () => {
                 // Rate limiting logic
                 if (requestCount >= MAX_REQUESTS) {
                     console.log("Rate limit reached, waiting for 10 seconds...");
+                    logger.info(`Rate limit reached, waiting for 10 seconds...`);
                     await delay(10000);
                     requestCount = 0; // Reset the counter after waiting
                 }
@@ -169,8 +175,10 @@ export const getGreenHouseJobs = async () => {
 
 export const filterGreenHouseJobs = async () => {
     console.log("Inside filter greenhouse jobs");
+    logger.info(`Inside filter greenhouse jobs`);
     const greenhouse_list = await getGreenHouseJobs();
     console.log("Total number of jobs found:", greenhouse_list.length);
+    logger.info(`Total number of jobs found: ${greenhouse_list.length}`);
     const filtered_greenhouse_list = [];
     const limit = pLimit(CONCURRENCY_LIMIT);
 
@@ -193,6 +201,7 @@ export const filterGreenHouseJobs = async () => {
             return null;
         } catch (error) {
             console.log("Error filtering job data for company:", error.message);
+            logger.error(`Error filtering job data for company: ${error.message}`);
         }
     };
 
