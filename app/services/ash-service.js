@@ -26,6 +26,7 @@ export const getFilteredAshJobs = async () => {
     const startTimer = new Date();
 
     console.log("Start filtering Ash jobs:", startTimer);
+    logger.info(`Start filtering Ash jobs: ${startTimer}`);
     const filtered_ash_list = await filterAshJobs();
 
     console.log("Filtering started for Ash Jobs:", new Date());
@@ -33,7 +34,9 @@ export const getFilteredAshJobs = async () => {
     fileHandler.writeToExcel(filtered_ash_list, fileName);
     // total number of jobs filtered
     console.log(filtered_ash_list.length);
+    logger.info(`Number of jobs after filtering: ${filtered_ash_list.length}`);
     console.log("Time taken to filter Ash Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
+    logger.info(`Time taken to filter Ash Jobs: : ${(Date.now() - startTimer) / 1000} seconds`);
     return filtered_ash_list;
 }
 
@@ -52,6 +55,7 @@ export const getAllCompanies = async () => {
     // fileHandler.writeToCsvCompanyNames(company_set.sort(), "gh-embed-ez-all");
     // process.exit();
     console.log(company_list.length);
+    logger.info(`Number of companies for Ash: ${company_list.length}`);
     return company_list;
 }
 
@@ -153,8 +157,10 @@ export const getAshJobs = async () => {
 
 export const filterAshJobs = async () => {
     console.log("Inside filter Ash jobs");
+    logger.info(`Inside filter Ash jobs`);
     const ash_list = await getAshJobs();
     console.log("Total number of jobs found:", ash_list.length);
+    logger.info(`Total number of jobs found: ${ash_list.length}`);
     const filtered_ash_list = [];
     const limit = pLimit(CONCURRENCY_LIMIT);
 
@@ -177,6 +183,7 @@ export const filterAshJobs = async () => {
             return null;
         } catch (error) {
             console.log("Error filtering job data for company:", error.message);
+            logger.error(`Error filtering job data for company: ${error.message}`);
         }
     };
 

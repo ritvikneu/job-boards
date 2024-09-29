@@ -89,6 +89,22 @@ sudo cp -r job-boards.service /lib/systemd/system
 # ls -la /opt/boarduser
 
 
+echo "+-------------------------------------------------------------+"
+echo "|                                                             |"
+echo "|                 INSTALL & CONFIGURE CLOUDWATCH              |"
+echo "|                                                             |"
+echo "+-------------------------------------------------------------+"
+
+echo 'Downloading the CloudWatch Agent package...'
+sudo wget https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
+ 
+echo 'Installing the CloudWatch Agent package...'
+sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+ 
+echo 'Enabling the CloudWatch Agent service...'
+sudo systemctl enable amazon-cloudwatch-agent
+sudo systemctl start amazon-cloudwatch-agent
+
 
 
 # echo "+-------------------------------------------------------------+"
