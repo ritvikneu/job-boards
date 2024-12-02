@@ -1,6 +1,6 @@
 import amqp from 'amqplib';
 
-let QUEUE_NAME = "workday-queue-2";
+let QUEUE_NAME;
 const EXCHANGE_NAME = "boards-exchange";
 const ROUTING_KEY = "boards";
 
@@ -13,8 +13,8 @@ async function setupRabbitMQ() {
     channel = await connection.createChannel();
     
     await channel.assertExchange(EXCHANGE_NAME, 'direct', { durable: true });
-    await channel.assertQueue(QUEUE_NAME, { durable: true });
-    await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
+    // await channel.assertQueue(QUEUE_NAME, { durable: true });
+    // await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
     
     channel.on('error', (err) => {
       console.error('Channel error', err);
@@ -36,7 +36,7 @@ async function setupRabbitMQ() {
 setupRabbitMQ();
 
 export const producer = async (sublinks,qname) => {
-  // Queue name is qname + epoch time
+  // Queue name is qname  
   QUEUE_NAME = qname;
   await channel.assertQueue(QUEUE_NAME, { durable: true });
   await channel.bindQueue(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
@@ -54,8 +54,9 @@ export const producer = async (sublinks,qname) => {
 };
 
 
-  export const getNextMessages = async (batchSize) => {
+  export const getNextMessages = async (batchSize, qname) => {
     try {
+      QUEUE_NAME = qname;
       if (!channel) await setupRabbitMQ();
       const messages = [];
       for (let i = 0; i < batchSize; i++) {
@@ -77,8 +78,9 @@ export const producer = async (sublinks,qname) => {
     }
   };
 
-  export const consusmerBatch = async (batchSize) => {
+  export const consusmerBatch = async (batchSize, qname) => {
     try {
+      QUEUE_NAME = qname;
       if (!channel) await setupRabbitMQ();
       const messages = [];
       for (let i = 0; i < batchSize; i++) {
@@ -100,8 +102,9 @@ export const producer = async (sublinks,qname) => {
     }
   };
 
-export const consumer = async (filterFunction) => {
+export const consumer = async (filterFunction, qname) => {
   try {
+    QUEUE_NAME = qname;
     await channel.consume(QUEUE_NAME, async (message) => {
       if (message !== null) {
         const { url, companyName } = message;

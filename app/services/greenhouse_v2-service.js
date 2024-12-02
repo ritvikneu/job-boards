@@ -29,18 +29,21 @@ export const getFilteredGreenHouseJobs = async (embed) => {
 
     console.log("Start filtering greenhouse jobs:", startTimer);
     logger.info(`Start filtering greenhouse jobs: ${startTimer}`);
+
     const filtered_greenhouse_list = await filterGreenHouseJobs();
 
     console.log("Filtering started for Greenhouse Jobs:", new Date());
     logger.info(`Filtering started for Greenhouse Jobs: ${new Date()}`);
     console.log("Number of jobs after filtering:", filtered_greenhouse_list.length);
     logger.info(`Number of jobs after filtering: ${filtered_greenhouse_list.length}`);
+
     fileHandler.writeToExcel(filtered_greenhouse_list, fileName);
     // total number of jobs filtered
     console.log(filtered_greenhouse_list.length);
     logger.info(`Number of jobs after filtering: ${filtered_greenhouse_list.length}`);
     console.log("Time taken to filter Greenhouse Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
     logger.info(`Time taken to filter Greenhouse Jobs: : ${(Date.now() - startTimer) / 1000} seconds`);
+    
     return filtered_greenhouse_list;
 }
 
@@ -71,7 +74,7 @@ export const getGreenHouseJobs = async () => {
 
     async function fetchJobData(company) {
         let requestCount = 0;
-        const MAX_REQUESTS = 100; // Adjust this value based on your rate limit
+        const MAX_REQUESTS = 500; // Adjust this value based on your rate limit
 
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         let company_jobs_url = company.link;
@@ -84,6 +87,7 @@ export const getGreenHouseJobs = async () => {
                 if (current_page > 1) {
                     company_jobs_url = company.link + `&page=${current_page}`;
                 }
+                // console.log("current page:", current_page);
 
                 // Rate limiting logic
                 if (requestCount >= MAX_REQUESTS) {
@@ -113,7 +117,7 @@ export const getGreenHouseJobs = async () => {
                             const remixContext = JSON.parse(remixContextStr);
 
                             const routeKey = EMBED ? 'routes/embed.job_board' : 'routes/$url_token';
-
+                            
                             if (remixContext.state && remixContext.state.loaderData && remixContext.state.loaderData[routeKey].jobPosts) {
                                 if (current_page == 1) {
                                     total_pages = remixContext.state.loaderData[routeKey].jobPosts.total_pages;

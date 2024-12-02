@@ -28,12 +28,13 @@ import { createCustomLogger } from '../middleware/logger.js';
 const logger = createCustomLogger(fileName);
 
 
+
 export const getAllCompaniesJson = async () => {
     console.log("inside get all workday companies");
     const company_set = new Set();
     const jsonFile = `app/companies/workday/${fileName}.json`;
     const content = readFileSync(jsonFile, 'utf8');
-    const companies = JSON.parse(content); // Parse the JSON content
+    const companies = JSON.parse(content); 
 
     return companies.reduce((acc, company) => {
         try {
@@ -53,7 +54,7 @@ export const getAllCompaniesJson = async () => {
 export const workdayJobsNoFilter = async () => {
     console.log("inside workday call");
     const company_list = await getAllCompaniesJson();
-    return getWorkdayJobs(company_list);
+    return getWorkdayJobs(company_list);    
 }
 
 export const filterWorkDayJobs = async (file_name) => {
@@ -105,8 +106,9 @@ const limiter = new Bottleneck({
 export const workdayFetch = async (url, offset, companyName, retries = 3) => {
     try {
         const response = await axios.post(url, {
-            appliedFacets: {},
+            // appliedFacets: {},
             // appliedFacets:{"timeType":["1aea6da227e21005504339b6b1770001"],"jobFamilyGroup":["e65dbadf6a50100168ed86fe4cf50001"],"workerSubType":["183bb31d97231001005066125c530001"]},
+            // appliedFacets:{"locationCountry":["bc33aa3152ec42d4995f4791a106ed09"]}, //FILTER BY COUNTRY CODE USA
             limit: 20,
             offset: offset,
             searchText: ''
@@ -169,6 +171,8 @@ export const getWorkdayJobs = async (company_list) => {
     const jobPostings = [];
     const job_links_seen = new Set();
     const processedJobs = [];
+    // qname is the fileName + epoch time
+    let qname = fileName + Date.now();
 
     // Producer function to fetch job listings and queue them for processing
     const producerPromise = async () => {
@@ -203,7 +207,7 @@ export const getWorkdayJobs = async (company_list) => {
         jobUrls.sort(() => 0.5 - Math.random());
 
         // Queue all job URLs for processing
-        await producer(jobUrls, fileName);
+        await producer(jobUrls, qname);
         console.log(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
         logger.info(`Producer finished. Sent ${jobUrls.length} jobs to the queue.`);
 
@@ -219,7 +223,7 @@ export const getWorkdayJobs = async (company_list) => {
         while (emptyQueueCount < 2) {
             try {
                 // Fetch a batch of messages from the queue
-                const messages = await getNextMessages(BATCH_SIZE);
+                const messages = await getNextMessages(BATCH_SIZE, qname);
                 if (messages.length === 0) {
                     emptyQueueCount++;
                     console.log(`Consumer ${workerId} found empty queue. Attempt ${emptyQueueCount}`);
@@ -293,7 +297,7 @@ export const getWorkdayJobs = async (company_list) => {
         console.log(`Consumers completed. ${consumedJobs.length} jobs processed.`);
         logger.info(`Consumers completed. ${consumedJobs.length} jobs processed.`);
         // Close the connection to the message queue
-        await closeConnection(fileName);
+        await closeConnection(qname);
 
         return consumedJobs;
     } catch (error) {

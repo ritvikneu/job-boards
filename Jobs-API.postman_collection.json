@@ -1,0 +1,328 @@
+{
+	"info": {
+		"_postman_id": "fb143d03-2157-404b-9827-c59d31592d29",
+		"name": "Jobs-API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26512020"
+	},
+	"item": [
+		{
+			"name": "Greenhouse",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"embed\": true\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:7777/greenhouse",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"greenhouse"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Lever",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:7777/lever",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"lever"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ash",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:7777/ash",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"ash"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:7777/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Oracloud",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:7777/oracloud",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"oracloud"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Workday",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"file_name\": \"wday1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:7777/workday",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"workday"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Dice",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"page_number\": 1\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:7777/dice",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"dice"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "LB",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "boards-lb-512427891.us-east-1.elb.amazonaws.com/health",
+					"host": [
+						"boards-lb-512427891",
+						"us-east-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Glassdoor",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "accept",
+						"value": "*/*"
+					},
+					{
+						"key": "accept-language",
+						"value": "en-US,en;q=0.9"
+					},
+					{
+						"key": "apollographql-client-name",
+						"value": "job-search-next"
+					},
+					{
+						"key": "apollographql-client-version",
+						"value": "7.77.2-hotfix-7-77-2-performance.3"
+					},
+					{
+						"key": "content-type",
+						"value": "application/json"
+					},
+					{
+						"key": "cookie",
+						"value": "uc=8013A8318C98C5176D1CF561F7462EF78362512E60780D141279CD4B11279315A02953973422DB819293E539E6F89C4F476DF27BCCECD447DA119408AE1766EFB7EDA8B151055E0D20607A8EF8010F1ACDC764049EDF6958DDBC022B51C4CF3A2EC18C02C137C5922549E20027CF76EC7FFCC87FD7AFBB55B9AE37A165588067C8D2B56C510799B52F27473255709104; gdId=66a0481f-9762-4f16-8af9-4205a8868abf; indeedCtk=1hr9fi2dpk5p8801; trs=https%3A%2F%2Fwww.redhat.com%2F:referral:referral:2024-08-21+11%3A13%3A35.67:undefined:undefined; _pxhd=6411a1b82938537d108c0dbb054249353c2a81f4df9402ce08581fcda634082c:8e0bd4c4-602a-11ef-b39b-8126bcb2bca7; g_state={\"i_p\":1725390309920,\"i_l\":1}; AFSID=ZmU3NjlkMzEtZDIwNy00Y2EwLThiZGItNzk5ZTRlMzhjMzQx; datadome=tiUWjBSAmVic9e4ZRJKH_cW4awvlgGJ~OFEDoPPePhhKsUUCBWHJFpsp12SU~oZnq38sKmfLbjifaRq_i35UeZZaXkCr2yAV7P_yvdW6ZYKuV23k~wFOYYvvEQqUpOcc; fpvc=7; at=VCsWUJVffyID0gL9q2ZohgNfFabfXtK1uPTH86R5ljeJEJIu7xEd9_SCv3rFH1ZNQMzrJVmt9SAOLbK44DF_oNiQTKo7JZfdawb3sX5J5H4pomZNk5-7FdkR7_xO5lVqlwZE3v_nfRBZkXAvgfso8FvMd0byoRHNl1l9NNQpFPcnJFX8qYve_eHbPEcvS6y3Auj_nshVtot2JWJsPuAKNvjpPAR3Aex1Ul30SbADFDSzIaHSf-AI9sSUFpqSXhzIej0sVe4ffVhtQODqa3cidQO0AuD5S_wu0oCDndvfgAY79mJ7koCKpx3roJf6r4nNYVSCDLrN0q4Hj_e3EN0sdpyRWJbh9LwvRv6_0C9IcTBzUbDwF1IiZZHpHr_iv8RkMGSTJgriPFtgRQfSd1lokTRpTUwFwsiztswNaemQPpNwsafBOB1ZnCNlBdZQrdoGOG6_KF-3hH8rHzhhRyUNI6vZv7YCX6HX6TLbrc3At-WY1Z7GkrhQjKulHTg2B2IyBuGyvJpD4RszfLtobNmlMjCrKc5bkSdgg3gQCGjijFZBEfRc1VCTiiajXbGnt7o0qkoKfRlt2pEhabX5bY4gA57kJGwIwcmotib9vyq2AA2V-rEM48oTBNZV5CcgjoDEFTD48mlqqXHPxMnxyQeRKXgFvQs26tTRRCg57PSPSTnJV9bpOR0M-Z0RowLAKWOax5cRrgnkq4EBSpDzW7-IGssRe8NcfShC5rKh2jPMcHipilY__daFT3V_iAZ2_HfMZWQ85wbnBMZOxmun5YvTABNjtq4GabR99Wu2qAlrZnnBp84dA9d6WP3O_2qb1D7c4A4kZ7x7YBngvUSgcBwM9BVtfyEYQAi2o0gam0nqS0VjQ-IjNq-egXKUL64O4T2axNX6nZ9X2rcVLY7NTyBPp1RwnHW2l4MJ6O-MCHi0aCMsh_WNTa2gyBSN9ZlPCJRM-2MsIvvH; __cf_bm=etyzLBbsNKWXOxzauhUSqvQRJxK_dBSH.WEQWhFDJf4-1727321247-1.0.1.1-F30pM5S.mEOfpR_xWQ0250HB_uoVEa_YHcQTyyUUid.I8nqKMVJaPgCt3DEY.rgY5Cbqd.LSRei.MHdCh.k1tuDj0zaHWw288Zlf35uSMQM; _cfuvid=eZBO.si1gAjNjdSTsN9fb3xanlASMBLJx_paXpke6rM-1727321247814-0.0.1.1-604800000; GSESSIONID=undefined; cf_clearance=QUN5hDB096eIGSElBYcmDiGhGyikTmsE8btkGhBhyhA-1727321250-1.2.1.1-Af2FCEeXB8M1HFC4tQ0IpLlrbnmEs_pdMooff.Wf2BSDiKjhDQKprU59zKB5s4YUx7BNPG4.7HzQEOBvW9nqPhZGuqw9zMj7BqpdQwIiBwcWm9Ll_IwpSIfV1VbezIAajqMzT7F6yVLCPAZ2uN28WL.Ajf5U0X5nUQb.AQ6Xpy8XTymrnZvdrVkX.7s8P3Ejfa6l3gA3e5ANeq8Usl0a7nBz990ONWmQjGlUFbp_JmDrrriiOFgfyoOdRkKvOGm2hFEKqAER.nCsgw3KQYJ2vco6s8Fy1g8krQmBkeNy_RdZbgJlL9DKYJfBY74sSumHjFRSTXn3AvzvJ8xHdwRqxLaxp9_vlDxLwtAhh2Wb0BSuqz2n9C5hJgAR2yIVGivz36sTT4Jucpur_rrSX5JbcQ; JSESSIONID=7700C06890FBF7CB08F394E55C72E231; cass=0; postApplyCallbackData=%7B%22emailAddress%22%3A%22ritvik.param%40gmail.com%22%2C%22jobListingId%22%3A%221009460624068%22%2C%22adOrderId%22%3A%221136043%22%2C%22purchaseAdOrderId%22%3A%220%22%2C%22userId%22%3A%2280BCEFCDD4937A2CC088411C535FE973%22%2C%22userGuid%22%3A%2266a0481f-9762-4f16-8af9-4205a8868abf%22%2C%22pageGuid%22%3A%22000001922c5ede7888b51a1cfffb579f%22%2C%22ip%22%3A%2224.2.247.57%22%2C%22dt%22%3A%221%22%2C%22pt%22%3A%223%22%2C%22vt%22%3A%224%22%2C%22locale%22%3A%22en-US%22%2C%22from%22%3A%22glassdoor%22%2C%22asid%22%3A%2266a0481f-9762-4f16-8af9-4205a8868abf.1727321246.0%22%2C%22spn%22%3A%220%22%2C%22ipLocType%22%3A%22C%22%2C%22ipLocId%22%3A%221154595%22%2C%22searchType%22%3A%22SR%22%2C%22postApplyUrl%22%3A%22https%3A%2F%2Fwww.glassdoor.com%2Fjob-listing%2Fapi%2Fsmart-apply%22%2C%22jobTitle%22%3A%22software%20engineer%22%2C%22locName%22%3A%22Remote%22%2C%22locType%22%3A%22S%22%2C%22locId%22%3A%2211047%22%7D; asst=1727321369.2; alr=https%3A%2F%2Fsmartapply.indeed.com%2F; AWSALB=2ToJKSe1M6NKJoZ7aBjsmpBL3nPSzTvtx0dLMFZx621hFFHv0p8WvgAj1Sb02IpmBgoNkzsmGUt7s+N7biHYh8KHb01whXkMx1rBK/xlv2DtdhxfMuTzyW1Y5eVw; AWSALBCORS=2ToJKSe1M6NKJoZ7aBjsmpBL3nPSzTvtx0dLMFZx621hFFHv0p8WvgAj1Sb02IpmBgoNkzsmGUt7s+N7biHYh8KHb01whXkMx1rBK/xlv2DtdhxfMuTzyW1Y5eVw; gdsid=1727321246759:1727321568575:A1A375EE04CAB5F0C2F1C556D9872A21; bs=hK3wPCD3Tib7Kg74pdzwMw:yx-OX4lRvgTc6A-4s5pDc-qrcxcCIohVzMlesy9wfdnLKNreOVACAYCJe4JXD_5O3DWzs2dFigugfJjp_Y7kiArCi7WRrt_DJY7-u0xhJWI:E3Pal0yWO9yJd_nJZF6tcRojv9RaapVHBAVqqMo2bRw"
+					},
+					{
+						"key": "dnt",
+						"value": "1"
+					},
+					{
+						"key": "gd-csrf-token",
+						"value": "MUjxxJ4LdpGdqdHY7VEP4Q:4rvfEEy_SFAu37Xf-KlmI7OAZes-DNR-bGODK68fS9GxyGiBdEEE4scMRnhS-ahurm9j3g_aGX4AXfdkuE3BKA:hI3CrjfoZBomTkCpCDn98AzRH_8RHGO8mP1Xm_Jt43I"
+					},
+					{
+						"key": "origin",
+						"value": "https://www.glassdoor.com"
+					},
+					{
+						"key": "priority",
+						"value": "u=1, i"
+					},
+					{
+						"key": "referer",
+						"value": "https://www.glassdoor.com/"
+					},
+					{
+						"key": "sec-ch-device-memory",
+						"value": "8"
+					},
+					{
+						"key": "sec-ch-ua",
+						"value": "\"Chromium\";v=\"129\", \"Not=A?Brand\";v=\"8\""
+					},
+					{
+						"key": "sec-ch-ua-arch",
+						"value": "\"arm\""
+					},
+					{
+						"key": "sec-ch-ua-full-version-list",
+						"value": "\"Chromium\";v=\"129.0.6668.59\", \"Not=A?Brand\";v=\"8.0.0.0\""
+					},
+					{
+						"key": "sec-ch-ua-mobile",
+						"value": "?0"
+					},
+					{
+						"key": "sec-ch-ua-model",
+						"value": "\"\""
+					},
+					{
+						"key": "sec-ch-ua-platform",
+						"value": "\"macOS\""
+					},
+					{
+						"key": "sec-fetch-dest",
+						"value": "empty"
+					},
+					{
+						"key": "sec-fetch-mode",
+						"value": "cors"
+					},
+					{
+						"key": "sec-fetch-site",
+						"value": "same-origin"
+					},
+					{
+						"key": "user-agent",
+						"value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+					},
+					{
+						"key": "x-gd-job-page",
+						"value": "serp"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"operationName\":\"JobSearchResultsQuery\",\"variables\":{\"excludeJobListingIds\":[],\"filterParams\":[{\"filterKey\":\"fromAge\",\"values\":\"3\"},{\"filterKey\":\"maxSalary\",\"values\":\"210000\"},{\"filterKey\":\"minSalary\",\"values\":\"95000\"},{\"filterKey\":\"jobTypeIndeed\",\"values\":\"CF3CP\"},{\"filterKey\":\"sgocId\",\"values\":\"1007\"},{\"filterKey\":\"remoteWorkType\",\"values\":\"1\"}],\"keyword\":\"software engineer\",\"locationId\":1,\"locationType\":\"COUNTRY\",\"numJobsToShow\":30,\"originalPageUrl\":\"https://www.glassdoor.com/Job/united-states-software-engineer-jobs-SRCH_IL.0,13_IN1_KO14,31.htm?fromAge=3&maxSalary=210000&minSalary=95000&jobTypeIndeed=CF3CP&sgocId=1007&remoteWorkType=1\",\"parameterUrlInput\":\"IL.0,13_IN1_KO14,31\",\"pageType\":\"SERP\",\"queryString\":\"fromAge=3&maxSalary=210000&minSalary=95000&jobTypeIndeed=CF3CP&sgocId=1007&remoteWorkType=1\",\"seoFriendlyUrlInput\":\"united-states-software-engineer-jobs\",\"seoUrl\":true,\"includeIndeedJobAttributes\":false,\"pageCursor\":\"AB4AAoEAPAAAAAAAAAAAAAAAAjPptdcAJQEBARIGk/1XBJceRRnjVVE8iAU05lMuQLAcFD5Lf3TyxdkRuhAAAA==\",\"pageNumber\":3},\"query\":\"query JobSearchResultsQuery($excludeJobListingIds: [Long!], $filterParams: [FilterParams], $keyword: String, $locationId: Int, $locationType: LocationTypeEnum, $numJobsToShow: Int!, $originalPageUrl: String, $pageCursor: String, $pageNumber: Int, $pageType: PageTypeEnum, $parameterUrlInput: String, $queryString: String, $seoFriendlyUrlInput: String, $seoUrl: Boolean, $includeIndeedJobAttributes: Boolean) {\\n  jobListings(\\n    contextHolder: {queryString: $queryString, pageTypeEnum: $pageType, searchParams: {excludeJobListingIds: $excludeJobListingIds, filterParams: $filterParams, keyword: $keyword, locationId: $locationId, locationType: $locationType, numPerPage: $numJobsToShow, pageCursor: $pageCursor, pageNumber: $pageNumber, originalPageUrl: $originalPageUrl, seoFriendlyUrlInput: $seoFriendlyUrlInput, parameterUrlInput: $parameterUrlInput, seoUrl: $seoUrl, searchType: SR, includeIndeedJobAttributes: $includeIndeedJobAttributes}}\\n  ) {\\n    companyFilterOptions {\\n      id\\n      shortName\\n      __typename\\n    }\\n    filterOptions\\n    indeedCtk\\n    jobListings {\\n      ...JobView\\n      __typename\\n    }\\n    jobListingSeoLinks {\\n      linkItems {\\n        position\\n        url\\n        __typename\\n      }\\n      __typename\\n    }\\n    jobSearchTrackingKey\\n    jobsPageSeoData {\\n      pageMetaDescription\\n      pageTitle\\n      __typename\\n    }\\n    paginationCursors {\\n      cursor\\n      pageNumber\\n      __typename\\n    }\\n    indexablePageForSeo\\n    searchResultsMetadata {\\n      searchCriteria {\\n        implicitLocation {\\n          id\\n          localizedDisplayName\\n          type\\n          __typename\\n        }\\n        keyword\\n        location {\\n          id\\n          shortName\\n          localizedShortName\\n          localizedDisplayName\\n          type\\n          __typename\\n        }\\n        __typename\\n      }\\n      footerVO {\\n        countryMenu {\\n          childNavigationLinks {\\n            id\\n            link\\n            textKey\\n            __typename\\n          }\\n          __typename\\n        }\\n        __typename\\n      }\\n      helpCenterDomain\\n      helpCenterLocale\\n      jobAlert {\\n        jobAlertId\\n        __typename\\n      }\\n      jobSerpFaq {\\n        questions {\\n          answer\\n          question\\n          __typename\\n        }\\n        __typename\\n      }\\n      jobSerpJobOutlook {\\n        occupation\\n        paragraph\\n        heading\\n        __typename\\n      }\\n      showMachineReadableJobs\\n      __typename\\n    }\\n    serpSeoLinksVO {\\n      relatedJobTitlesResults\\n      searchedJobTitle\\n      searchedKeyword\\n      searchedLocationIdAsString\\n      searchedLocationSeoName\\n      searchedLocationType\\n      topCityIdsToNameResults {\\n        key\\n        value\\n        __typename\\n      }\\n      topEmployerIdsToNameResults {\\n        key\\n        value\\n        __typename\\n      }\\n      topEmployerNameResults\\n      topOccupationResults\\n      __typename\\n    }\\n    totalJobsCount\\n    __typename\\n  }\\n}\\n\\nfragment JobView on JobListingSearchResult {\\n  jobview {\\n    header {\\n      indeedJobAttribute {\\n        skills\\n        extractedJobAttributes {\\n          key\\n          value\\n          __typename\\n        }\\n        __typename\\n      }\\n      adOrderId\\n      advertiserType\\n      ageInDays\\n      divisionEmployerName\\n      easyApply\\n      employer {\\n        id\\n        name\\n        shortName\\n        __typename\\n      }\\n      expired\\n      organic\\n      employerNameFromSearch\\n      goc\\n      gocConfidence\\n      gocId\\n      isSponsoredJob\\n      isSponsoredEmployer\\n      jobCountryId\\n      jobLink\\n      jobResultTrackingKey\\n      normalizedJobTitle\\n      jobTitleText\\n      locationName\\n      locationType\\n      locId\\n      needsCommission\\n      payCurrency\\n      payPeriod\\n      payPeriodAdjustedPay {\\n        p10\\n        p50\\n        p90\\n        __typename\\n      }\\n      rating\\n      salarySource\\n      savedJobId\\n      seoJobLink\\n      __typename\\n    }\\n    job {\\n      descriptionFragmentsText\\n      importConfigId\\n      jobTitleId\\n      jobTitleText\\n      listingId\\n      __typename\\n    }\\n    jobListingAdminDetails {\\n      cpcVal\\n      importConfigId\\n      jobListingId\\n      jobSourceId\\n      userEligibleForAdminJobDetails\\n      __typename\\n    }\\n    overview {\\n      shortName\\n      squareLogoUrl\\n      __typename\\n    }\\n    __typename\\n  }\\n  __typename\\n}\\n\"}]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://www.glassdoor.com/graph",
+					"protocol": "https",
+					"host": [
+						"www",
+						"glassdoor",
+						"com"
+					],
+					"path": [
+						"graph"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "lb_arn",
+			"value": "boards-lb-512427891.us-east-1.elb.amazonaws.com"
+		}
+	]
+}

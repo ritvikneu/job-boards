@@ -1,0 +1,150 @@
+# Terraform script for Azure Kubernetes Service (AKS) Setup with Remote Backend
+
+provider "azurerm" {
+  features {}
+}
+
+# Configure the backend for remote state storage
+terraform {
+  backend "azurerm" {
+    resource_group_name   = "kroger-tf-backend-rg"
+    storage_account_name  = "krogertfbackend"
+    container_name        = "tfstate"
+    key                   = "aks-cluster.terraform.tfstate"
+  }
+}
+
+# Resource Group for Kubernetes and Container Registry
+resource "azurerm_resource_group" "main" {
+  name     = "kroger-rag-rg"
+  location = "East US"
+}
+
+# Virtual Network (VNet) for AKS Cluster
+# VNet is required to define the network boundary for AKS
+resource "azurerm_virtual_network" "main" {
+  name                = "kroger-vnet"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  address_space       = ["10.0.0.0/16"]
+}
+
+# Subnet for AKS Nodes
+# Subnet within the VNet for AKS node pools
+resource "azurerm_subnet" "aks_subnet" {
+  name                 = "aks-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+# Network Security Group (NSG) for AKS
+# NSG to control traffic flow in and out of the subnet
+resource "azurerm_network_security_group" "aks_nsg" {
+  name                = "aks-nsg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+}
+
+# Associate NSG with Subnet
+resource "azurerm_subnet_network_security_group_association" "aks_nsg_association" {
+  subnet_id                 = azurerm_subnet.aks_subnet.id
+  network_security_group_id = azurerm_network_security_group.aks_nsg.id
+}
+
+# Azure Kubernetes Service (AKS) Cluster
+resource "azurerm_kubernetes_cluster" "main" {
+  name                = "kroger-aks-cluster"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  dns_prefix          = "kroger-aks"
+
+  default_node_pool {
+    name                = "agentpool"
+    node_count          = 3
+    vm_size             = "Standard_DS2_v2"
+    vnet_subnet_id      = azurerm_subnet.aks_subnet.id
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+# Azure Container Registry (ACR)
+resource "azurerm_container_registry" "main" {
+  name                = "krogeracr"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku                 = "Basic"
+}
+
+# Azure Role Assignment for AKS to ACR
+# Allows AKS to pull images from ACR
+resource "azurerm_role_assignment" "acr_pull" {
+  principal_id                   = azurerm_kubernetes_cluster.main.kubelet_identity[0].object_id
+  role_definition_name           = "AcrPull"
+  scope                          = azurerm_container_registry.main.id
+}
+
+# Azure Load Balancer for AKS
+# Load Balancer is automatically created by AKS to manage inbound traffic
+# Configuration is managed by Kubernetes Services of type LoadBalancer
+
+# Azure Storage Account for Terraform State
+resource "azurerm_storage_account" "tf_backend" {
+  name                     = "krogertfbackend"
+  resource_group_name      = "kroger-tf-backend-rg"
+  location                 = "East US"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# Storage Container for Terraform State
+resource "azurerm_storage_container" "tfstate" {
+  name                  = "tfstate"
+  storage_account_name  = azurerm_storage_account.tf_backend.name
+  container_access_type = "private"
+}
+
+# Azure Key Vault for Secrets Management
+# Store sensitive information like credentials, API keys, etc.
+resource "azurerm_key_vault" "main" {
+  name                = "kroger-keyvault"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku_name            = "standard"
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+}
+
+# Azure Monitor for AKS Monitoring and Logging
+# Helps in monitoring AKS cluster health and application metrics
+resource "azurerm_log_analytics_workspace" "main" {
+  name                = "kroger-log-workspace"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "PerGB2018"
+}
+
+resource "azurerm_monitor_diagnostic_setting" "aks_monitor" {
+  name               = "aks-diagnostics"
+  target_resource_id = azurerm_kubernetes_cluster.main.id
+
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+
+  logs {
+    category = "AllLogs"
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+
+  metrics {
+    category = "AllMetrics"
+    enabled  = true
+    retention_policy {
+      enabled = false
+    }
+  }
+}

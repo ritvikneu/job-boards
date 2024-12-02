@@ -310,10 +310,29 @@
   {
     "name": "Cloudera",
     "link": "https://cloudera.wd5.myworkdayjobs.com/wday/cxs/cloudera/External_Career/jobs"
-    
   },
   {
     "name": "PluralSight",
     "link": "https://pluralsight.wd1.myworkdayjobs.com/wday/cxs/pluralsight/Careers/jobs"
+  },
+  {
+    "name": "Wells Fargo",
+    "link": "https://wd1.myworkdaysite.com/wday/cxs/wf/WellsFargoJobs/jobs"
+  },
+  {
+    "name": "S&P Global",
+    "link": "https://spgi.wd5.myworkdayjobs.com/wday/cxs/spgi/SPGI_Careers/jobs"
+  },
+  {
+    "name": "Gap",
+    "link": "https://gapinc.wd1.myworkdayjobs.com/wday/cxs/gapinc/GAPINC/jobs"
+  },
+  {
+    "name": "American Family Insurance",
+    "link": "https://amfam.wd1.myworkdayjobs.com/wday/cxs/amfam/Careers/jobs"
+  },
+  {
+    "name": "Blue Cross Blue Sheild",
+    "link": "https://bcbst.wd1.myworkdayjobs.com/wday/cxs/bcbst/External/jobs"
   }
 ]

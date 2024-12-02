@@ -11,7 +11,7 @@ const fileHandler = new FileHandler();
 import { FilterJobs } from './filtering-service.js';
 const filterJob = new FilterJobs();
 
-let fileName = process.env.FILE_ASH
+let fileName = process.env.FILE_ASH;
 const CONCURRENCY_LIMIT = 100; // Number of concurrent requests
 
 
