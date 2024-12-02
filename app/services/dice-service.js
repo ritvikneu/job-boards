@@ -158,3 +158,5 @@ export const getJobPositionId = async (job_link) => {
     }
 };
 
+
+// write a function to setup 

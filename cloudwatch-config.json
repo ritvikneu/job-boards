@@ -12,8 +12,7 @@
                   {
                       "file_path": "/opt/job-boards/logs/*.log",
                       "log_group_name": "boards-grp",
-                      "log_stream_name": "boards-stream",
-                      "timestamp": "%Y-%m-%d %H:%M:%S"
+                      "log_stream_name": "boards-stream"
                   }
               ]
           }
