@@ -58,7 +58,7 @@ class FileHandler {
 
         try {
             await this.workbook.xlsx.writeFile(excelFilePath);
-            sendMail(listing, excelFileName + " " + ". Number of jobs: " + data.length);
+            // sendMail(listing, excelFileName + " " + ". Number of jobs: " + data.length);
 
             console.log('Excel file saved:----------------', listing);
             printSuccessMessage(listing);
