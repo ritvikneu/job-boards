@@ -74,7 +74,7 @@ export const getGreenHouseJobs = async () => {
 
     async function fetchJobData(company) {
         let requestCount = 0;
-        const MAX_REQUESTS = 500; // Adjust this value based on your rate limit
+        const MAX_REQUESTS = 5000; // Adjust this value based on your rate limit
 
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         let company_jobs_url = company.link;
@@ -85,7 +85,7 @@ export const getGreenHouseJobs = async () => {
             while (current_page < total_pages) {
                 current_page += 1;
                 if (current_page > 1) {
-                    company_jobs_url = company.link + `&page=${current_page}`;
+                    company_jobs_url = company.link + `?page=${current_page}`;
                 }
                 // console.log("current page:", current_page);
 
@@ -93,7 +93,7 @@ export const getGreenHouseJobs = async () => {
                 if (requestCount >= MAX_REQUESTS) {
                     console.log("Rate limit reached, waiting for 10 seconds...");
                     logger.info(`Rate limit reached, waiting for 10 seconds...`);
-                    await delay(10000);
+                    await delay(20000);
                     requestCount = 0; // Reset the counter after waiting
                 }
 
@@ -127,9 +127,9 @@ export const getGreenHouseJobs = async () => {
                                 for (const job of jobPostingsFromBaseUrl) {
                                     let posting_date = job.published_at;
 
-                                    if (await filterJob.postingDateChecker(posting_date)) {
-                                        // Convert the DateTime formatted posting_date to date
-                                        posting_date = new Date(posting_date).toISOString().split('T')[0];
+                                    // if (await filterJob.postingDateChecker(posting_date)) {
+                                    //     // Convert the DateTime formatted posting_date to date
+                                    //     posting_date = new Date(posting_date).toISOString().split('T')[0];
                                         const extractedJob = {
                                             job_id: job.id,
                                             job_title: job.title,
@@ -142,10 +142,10 @@ export const getGreenHouseJobs = async () => {
                                             company_name: company.name
                                         };
 
-                                        if (extractedJob.job_link) {
+                                        // if (extractedJob.job_link) {
                                             greenhouse_list.push(extractedJob);
-                                        }
-                                    }
+                                        // }
+                                    // }
                                 }
                             }
                         }
@@ -216,4 +216,5 @@ export const filterGreenHouseJobs = async () => {
     filtered_greenhouse_list.push(...filteredJobs.filter(Boolean));
     // Use native sort with a comparison function
     return filtered_greenhouse_list.sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+    // return greenhouse_list;
 };
