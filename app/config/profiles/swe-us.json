@@ -1,0 +1,43 @@
+{
+  "job_titles": [
+    "software engineer",
+    "software developer",
+    "backend engineer",
+    "frontend engineer",
+    "full stack engineer",
+    "full stack developer",
+    "swe",
+    "systems engineer",
+    "platform engineer",
+    "infrastructure engineer",
+    "site reliability engineer",
+    "sre",
+    "devops engineer",
+    "cloud engineer"
+  ],
+  "ignore_titles": [
+    "manager",
+    "director",
+    "vp",
+    "head of",
+    "architect",
+    "distinguished",
+    "fellow",
+    "intern",
+    "internship",
+    "co-op",
+    "coop"
+  ],
+  "countries": ["usa", "united states", "remote", "us"],
+  "states": [
+    "california", "new york", "texas", "washington", "massachusetts",
+    "illinois", "georgia", "colorado", "florida", "virginia",
+    "new jersey", "north carolina", "oregon", "pennsylvania",
+    "arizona", "michigan", "ohio", "utah", "minnesota", "maryland"
+  ],
+  "states_abbr": [
+    "ca", "ny", "tx", "wa", "ma", "il", "ga", "co", "fl", "va",
+    "nj", "nc", "or", "pa", "az", "mi", "oh", "ut", "mn", "md"
+  ],
+  "posting_diff": 14
+}

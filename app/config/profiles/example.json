@@ -1,0 +1,8 @@
+{
+  "job_titles": ["software engineer", "backend engineer", "full stack engineer", "swe"],
+  "ignore_titles": ["senior", "staff", "principal", "lead", "manager", "director"],
+  "countries": ["usa", "united states", "remote"],
+  "states": ["california", "new york", "texas", "washington"],
+  "states_abbr": ["ca", "ny", "tx", "wa"],
+  "posting_diff": 7
+}

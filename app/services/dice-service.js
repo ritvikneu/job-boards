@@ -1,162 +1,215 @@
-
-import { write } from 'fs';
 import axios from 'axios';
 import jsdom from 'jsdom';
 const { JSDOM } = jsdom;
+import pLimit from 'p-limit';
 import { config } from 'dotenv';
 config();
 
 import { FilterJobs } from './filtering-service.js';
-const filterJob = new FilterJobs();
-
 import { FileHandler } from './file_creation-service.js';
-const fileHandler = new FileHandler();
+import { getJob, upsertJob, updateJobPositionId } from '../database/sqlite-service.js';
+import { createCustomLogger } from '../middleware/logger.js';
+import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
-let page_number = 1;
+const fileHandler      = new FileHandler();
+const defaultFilterJob = new FilterJobs();
 
-async function getDiceJobs(queryParams) {
-    const baseUrl = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
-    const url = new URL(baseUrl);
-    // Add query parameters to the URL
-    Object.keys(queryParams).forEach(key => {
-        if (Array.isArray(queryParams[key])) {
-            queryParams[key].forEach(value => url.searchParams.append(key, value));
-        } else {
-            url.searchParams.append(key, queryParams[key]);
-        }
-    });
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-    const headers = {
-        'x-api-key': '1YAt0R9wBg4WfsF9VB2778F5CHLAPMVW3WAZcKd8'
-    };
+const DICE_API_KEY             = '1YAt0R9wBg4WfsF9VB2778F5CHLAPMVW3WAZcKd8';
+const DICE_BASE_URL            = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
+const MAX_POSITION_CONCURRENCY = 10;    // pLimit for position-ID detail fetches
+const REQUEST_TIMEOUT_MS       = 15000;
 
-    try {
-        const response = await fetch(url.toString(), {
-            method: 'GET',
-            headers: headers
-        });
+const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+// ─── Step 1: Fetch Dice Listing ───────────────────────────────────────────────
 
-        const diceJobs = await response.json();
-        return diceJobs.data;
-    } catch (error) {
-        console.error('Error:', error);
-        throw error;
-    }
-}
-
-// Call the function to get the Dice jobs
-export const diceJobsFetch = async () => {
-    const queryParams = {
-        page: page_number,
-        pageSize: 1000,
-        facets: ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
+/**
+ * Fetches one page of Dice job listings via the search API.
+ *
+ * The API is pre-filtered by the query params:
+ *   - postedDate: ONE  → only today's postings
+ *   - employmentType: FULLTIME
+ *   - employerType: Direct Hire
+ *   - q: 'software'   → keyword match
+ *
+ * @param {number} page
+ * @param {Logger} logger
+ * @returns {object[]} raw job objects from Dice API
+ */
+const fetchDiceJobs = async (page, logger) => {
+    const url = new URL(DICE_BASE_URL);
+    const params = {
+        page,
+        pageSize:                 1000,
+        facets:                   ['employmentType', 'postedDate', 'workFromHomeAvailability', 'workplaceTypes', 'employerType', 'easyApply', 'isRemote', 'willingToSponsor'],
         'filters.employmentType': 'FULLTIME',
-        'filters.employerType': 'Direct Hire',
-        'filters.postedDate': 'ONE',
-        // 'filters.clientBrandNameFilter': 'Goldman Sachs & Co.'
-        // fields: [
-        //     'id', 'jobId', 'guid', 'summary', 'title', 'postedDate', 'modifiedDate', 'jobLocation.displayName'
-        // ],
-        q: 'software'
+        'filters.employerType':   'Direct Hire',
+        'filters.postedDate':     'ONE',
+        q:                        'software',
     };
-    try {
-        const diceJobs = await getDiceJobs(queryParams);
-        // console.log('Dice Jobs:', diceJobs);
-        return diceJobs;
-    } catch (error) {
-        console.error('Error fetching jobs:', error);
-    }
-}
 
-
-export const filterDiceJobs = async (page) => {
-    page_number = page;
-    console.log(page_number)
-    const allDiceJobs = await diceJobsFetch();
-    const filteredJobs = [];
-    const job_links_seen = new Set();
-
-    const job_posting = allDiceJobs.map(async job => {
-        let data = {}
-        data["company_name"] = job.companyName;
-        data["job_title"] = job.title;
-        data["job_link"] = job.detailsPageUrl;
-        data["location"] = job.jobLocation.displayName;
-        // format the current date to the same format as the posting date(YYYY-MM-DD)
-        let formatted_date = new Date(job.postedDate);
-        data["posting_date"] = formatted_date;
-
-        let title_to_check = data["job_title"].toLowerCase();
-
-        if (job.jobLocation.country === 'USA') {
-            const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false, 'workday');
-            if (title_matched) {
-                // console.log("title:", title_to_check);
-                data["position_id"] = await getJobPositionId(data["job_link"]);
-                if (!job_links_seen.has(data["job_link"])) {
-                    job_links_seen.add(data["job_link"]);
-                    filteredJobs.push(data);
-                }
-            }
-        }
-
-    });
-
-    const diceJobs = await Promise.all(job_posting);
-    // writeToExcel(filteredJobs, 'dice');
-    // sort all the jobs by company name
-    filteredJobs.sort((a, b) => {
-        return a.company_name.localeCompare(b.company_name);
-    });
-    fileHandler.writeToExcel(filteredJobs, `dice${page_number}`);
-    return filteredJobs;
-    // writeToExcel(filteredJobs, 'dice');
-    // console.log("filterDiceJobs", filterDiceJobs);
-
-}
-
-export const getJobPositionId = async (job_link) => {
-    let response = null;
-
-    try {
-        response = await axios.get(job_link);
-
-        if (response.status == 200) {
-            const htmlDom = new JSDOM(response.data);
-
-            // Fetch the aside tag with the class 'legalInfo'
-            const asideTag = htmlDom.window.document.querySelector('aside.legalInfo');
-
-            if (asideTag) {
-                // Get the li tag with the data-testid 'legalInfo-referenceCode'
-                const jobPositionElement = asideTag.querySelector('li[data-testid="legalInfo-referenceCode"]');
-
-                if (jobPositionElement) {
-                    // Extract the position ID text
-                    const jobPositionId = jobPositionElement.textContent.trim().replace('Position Id:', '').trim();
-                    // console.log("Job Position ID:", jobPositionId);
-                    return jobPositionId;
-                } else {
-                    console.log("Job Position ID element not found");
-                    return 0;
-                }
-            } else {
-                console.log("Aside tag with class 'legalInfo' not found");
-                return 0;
-            }
+    Object.entries(params).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+            value.forEach((v) => url.searchParams.append(key, v));
         } else {
-            console.log("Cannot fetch job position id");
-            return 0;
+            url.searchParams.set(key, value);
         }
-    } catch (error) {
-        console.log("Error in fetching job position id");
-        return 0;
+    });
+
+    try {
+        const response = await axios.get(url.toString(), {
+            headers: { 'x-api-key': DICE_API_KEY },
+            timeout: REQUEST_TIMEOUT_MS,
+        });
+        return response.data?.data ?? [];
+    } catch (err) {
+        logger.error(`Dice listing fetch failed (page ${page}): ${err.message}`);
+        recordScrapeError('dice');
+        return [];
     }
 };
 
+// ─── Step 2: Scrape Position ID ───────────────────────────────────────────────
 
-// write a function to setup 
+/**
+ * Fetches the position/reference ID for a single Dice job by scraping its
+ * detail page HTML. Returns null on failure (non-fatal).
+ *
+ * This is the expensive per-job HTTP GET. It is skipped on the fast path when
+ * the job is already cached in SQLite with a non-null position_id.
+ *
+ * @param {string} job_link
+ * @param {Logger} logger
+ * @returns {string|null}
+ */
+const fetchPositionId = async (job_link, logger) => {
+    try {
+        const response = await axios.get(job_link, { timeout: REQUEST_TIMEOUT_MS });
+        const dom      = new JSDOM(response.data);
+        const aside    = dom.window.document.querySelector('aside.legalInfo');
+        if (!aside) return null;
+        const el = aside.querySelector('li[data-testid="legalInfo-referenceCode"]');
+        if (!el) return null;
+        return el.textContent.trim().replace('Position Id:', '').trim() || null;
+    } catch (err) {
+        logger.warn(`Could not fetch position ID for ${job_link}: ${err.message}`);
+        return null;
+    }
+};
+
+// ─── Main Orchestrator ────────────────────────────────────────────────────────
+
+/**
+ * Entry point for the Dice scraper pipeline.
+ *
+ * Orchestrates four stages:
+ *   1. Fetch: pull up to 1000 job listings from the Dice search API
+ *      (already pre-filtered to today's full-time direct-hire software jobs)
+ *   2. Pre-filter: apply matchesLocation, matchesTitle, matchesPostingDate
+ *      in memory — zero HTTP calls
+ *   3. Resolve position_id for each passing job via fast or slow path:
+ *      - Fast path: job_link in SQLite → return cached row (skip HTML scrape)
+ *        If cached position_id is NULL, re-fetches and backfills via updateJobPositionId
+ *      - Slow path: new job → fetchPositionId → upsertJob → add to output
+ *   4. Write surviving jobs to Excel
+ *
+ * pLimit(MAX_POSITION_CONCURRENCY) caps concurrent position-ID fetches so we
+ * don't hammer Dice's detail page servers with 500+ simultaneous requests.
+ *
+ * @param {number}     page      - Dice API page number (passed from controller)
+ * @param {FilterJobs} filterJob - per-request filter config
+ * @returns {object[]} final filtered job array
+ */
+export const runDiceScraper = async (page = 1, filterJob = defaultFilterJob) => {
+    const logger    = createCustomLogger('dice');
+    const startTime = Date.now();
+    logger.info(`=== Dice Scraper Started | page=${page} | ${new Date().toISOString()} ===`);
+
+    try {
+        // Step 1: Fetch listing
+        const rawJobs = await fetchDiceJobs(page, logger);
+        logger.info(`Listing fetched: ${rawJobs.length} jobs (page ${page})`);
+
+        // Step 2: Map to canonical shape
+        const jobs = rawJobs.map((job) => ({
+            job_id:       job.id ?? null,
+            job_title:    job.title ?? '',
+            job_link:     job.detailsPageUrl ?? '',
+            location:     job.jobLocation?.displayName ?? '',
+            posting_date: job.postedDate
+                ? new Date(job.postedDate).toISOString().split('T')[0]
+                : null,
+            company_name: job.companyName ?? '',
+        }));
+
+        // Step 3: In-memory pre-filter (location + title + date — no HTTP)
+        const preFiltered = jobs.filter((job) => {
+            if (!filterJob.matchesLocation(job.location))        return false;
+            if (!filterJob.matchesTitle(job.job_title))          return false;
+            if (!filterJob.matchesPostingDate(job.posting_date)) return false;
+            return true;
+        });
+        logger.info(
+            `Pre-filter: ${jobs.length} → ${preFiltered.length} passed ` +
+            `(${jobs.length - preFiltered.length} rejected by location/title/date)`
+        );
+
+        // Step 4: Resolve position_id — fast path (SQLite) or slow path (HTML scrape)
+        const positionLimit = pLimit(MAX_POSITION_CONCURRENCY);
+        const seen          = new Set();
+        const filteredJobs  = [];
+
+        await Promise.all(preFiltered.map((job) =>
+            positionLimit(async () => {
+                if (!job.job_link || seen.has(job.job_link)) return;
+                seen.add(job.job_link);
+
+                // ── Fast path: previously scraped, use cached data ──────────
+                const cached = getJob(job.job_link);
+                if (cached) {
+                    let { position_id } = cached;
+                    // Backfill if cached but position_id was never fetched
+                    if (!position_id) {
+                        position_id = await fetchPositionId(job.job_link, logger);
+                        if (position_id) updateJobPositionId(job.job_link, position_id);
+                    }
+                    filteredJobs.push({ ...cached, position_id });
+                    return;
+                }
+
+                // ── Slow path: new job — scrape detail page, then persist ───
+                const position_id = await fetchPositionId(job.job_link, logger);
+                upsertJob({ ...job, position_id }, 'dice');
+                filteredJobs.push({ ...job, position_id });
+            })
+        ));
+
+        // Sort by posting_date descending (consistent with other services)
+        filteredJobs.sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+
+        recordScrapeMetrics('dice', {
+            durationMs:   Date.now() - startTime,
+            jobsScraped:  rawJobs.length,
+            jobsFiltered: filteredJobs.length,
+        });
+
+        if (filteredJobs.length > 0) {
+            fileHandler.writeToExcel(filteredJobs, `dice${page}`);
+            logger.info(`Excel file created with ${filteredJobs.length} jobs`);
+        } else {
+            logger.info('No jobs passed filtering — skipping file creation');
+        }
+
+        logger.info(`=== Dice Scraper Finished in ${formatElapsed(startTime)}s ===`);
+        return filteredJobs;
+
+    } catch (err) {
+        logger.error(`Fatal error in runDiceScraper: ${err.message}`);
+        throw err;
+    }
+};
+
+// Backward-compatible alias
+export const filterDiceJobs = runDiceScraper;

@@ -1,78 +1,110 @@
-
-import * as ghService from "../services/greenhouse_v2-service.js";
+import * as ghService from "../services/greenhouse-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as ashService from "../services/ash-service.js";
 import * as wday from "../services/wday-rabbit.js";
 import * as diceService from "../services/dice-service.js";
 import * as oraCloudService from "../services/oraclecloud-service.js";
 import { FileHandler } from '../services/file_creation-service.js';
+import { FilterJobs } from '../services/filtering-service.js';
+import { resolveFilterConfig } from '../services/profile-service.js';
+import { createCustomLogger } from '../middleware/logger.js';
 
 import { config } from 'dotenv';
 config();
 
-export const getGreenhouse = async (request, response) => { 
-    let embed = request.body.embed || false;
-    const res = await ghService.getFilteredGreenHouseJobs(embed);
-    response.json({message: res});
-}
+const logger = createCustomLogger('controller');
 
-// export const getGreenhouseEmbed = async (request, response) => { 
-//     // const res = await ghEmbedService.getFilteredGreenHouseJobs();
-//     const res = await ghService.getFilteredGreenHouseJobs(true);
-//     response.json({message: res});
-// }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export const getLever = async (request, response) => { 
-    const res = await leverService.getFilteredLeverJobs();
-    response.json({message: res});
-}
+/**
+ * Builds a per-request FilterJobs instance.
+ * Resolution order: inline body.filters → named body.profile → .env defaults.
+ * Throws if body.profile names a file that doesn't exist on disk.
+ */
+const buildFilterJob = (body) => new FilterJobs(resolveFilterConfig(body));
 
-export const getAsh = async (request, response) => { 
-    const res = await ashService.getFilteredAshJobs();
-    response.json({message: res});
-}
+// ─── Route Handlers ───────────────────────────────────────────────────────────
 
-export const getWorkday = async (request, response) => { 
-    // const res = await workdayService.filterWorkDayJobs();
-    let file_name = request.body.file_name || "wday1";
-    const res = await wday.filterWorkDayJobs(file_name);
-    response.json({message: res});
-}
+export const getGreenhouse = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const embed = request.body.embed || false;
+        const res = await ghService.runGreenhouseScraper(embed, filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getGreenhouse failed: ${err.message}`);
+        next(err);
+    }
+};
 
-export const getDice = async (request, response) => { 
-    let page_number = request.body.page_number || 1;
-    const res = await diceService.filterDiceJobs(page_number);
-    response.json({message: res});
-}
+export const getLever = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const res = await leverService.runLeverScraper(filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getLever failed: ${err.message}`);
+        next(err);
+    }
+};
 
+export const getAsh2 = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const res = await ashService.runAshScraper(filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getAsh2 failed: ${err.message}`);
+        next(err);
+    }
+};
 
-export const getOraCloud = async (request, response) => { 
-    const res = await oraCloudService.filterOracleCloudJobs();;
-    response.json({message: res});
-}
+export const getWorkday = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const file_name = request.body.file_name || 'wday1';
+        const res = await wday.runWorkdayScraper(file_name, filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getWorkday failed: ${err.message}`);
+        next(err);
+    }
+};
 
-export const getLatestJobs = async (request, response) => {
-    const fileHandler =  new FileHandler()
-    fileHandler.getLatestJobs();
-    response.json({message: 'Check your mail for the latest jobs'});
-}
+export const getDice = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const page_number = request.body.page_number || 1;
+        const res = await diceService.runDiceScraper(page_number, filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getDice failed: ${err.message}`);
+        next(err);
+    }
+};
 
-export const HealthCheck = async (request, response) => {
-    // set the response status to 200
-    response.status(200);
-    response.json({message: process.env.HEALTH_CHECK});
-}
+export const getOraCloud = async (request, response, next) => {
+    try {
+        const filterJob = buildFilterJob(request.body);
+        const res = await oraCloudService.runOracleCloudScraper(filterJob);
+        response.json({ message: res });
+    } catch (err) {
+        logger.error(`getOraCloud failed: ${err.message}`);
+        next(err);
+    }
+};
 
-const setSuccessfulResponse = (obj,response) => {
-    response.status(200); 
-    response.json(obj);
-}
+export const getLatestJobs = async (request, response, next) => {
+    try {
+        const fileHandler = new FileHandler();
+        await fileHandler.getLatestJobs();
+        response.json({ message: 'Check your mail for the latest jobs' });
+    } catch (err) {
+        logger.error(`getLatestJobs failed: ${err.message}`);
+        next(err);
+    }
+};
 
-const setErrorResponse = (err,response) => {
-    response.status(500); 
-    response.json({
-        error: {
-            message: err
-        }
-    });
-}
+export const HealthCheck = (request, response) => {
+    response.status(200).json({ message: process.env.HEALTH_CHECK });
+};

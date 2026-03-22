@@ -1,0 +1,33 @@
+{
+  "job_titles": [
+    "software engineer",
+    "software developer",
+    "backend engineer",
+    "frontend engineer",
+    "full stack engineer",
+    "full stack developer",
+    "swe",
+    "platform engineer",
+    "devops engineer",
+    "cloud engineer",
+    "data engineer",
+    "ml engineer",
+    "machine learning engineer",
+    "ai engineer"
+  ],
+  "ignore_titles": [
+    "manager",
+    "director",
+    "vp",
+    "head of",
+    "intern",
+    "internship",
+    "co-op",
+    "on-site only",
+    "onsite only"
+  ],
+  "countries": ["remote", "usa", "united states", "us"],
+  "states": [],
+  "states_abbr": [],
+  "posting_diff": 7
+}

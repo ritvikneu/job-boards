@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:7777/health)",
+      "Bash(curl -s http://localhost:7777/health)",
+      "mcp__Desktop_Commander__list_directory",
+      "mcp__Desktop_Commander__get_file_info",
+      "mcp__Desktop_Commander__read_file",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Desktop_Commander__start_process",
+      "Bash(curl -s \"https://api.lever.co/v0/postings/15five?mode=json\")",
+      "Bash(node -e \":*)",
+      "Bash(lsof -ti :7777)",
+      "Bash(xargs kill -9)"
+    ]
+  }
+}

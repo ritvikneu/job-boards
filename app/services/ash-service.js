@@ -3,195 +3,377 @@ import axios from 'axios';
 import jsdom from 'jsdom';
 import { config } from 'dotenv';
 import pLimit from 'p-limit';
+
 config();
 
 import { FileHandler } from './file_creation-service.js';
-const fileHandler = new FileHandler();
-
 import { FilterJobs } from './filtering-service.js';
-const filterJob = new FilterJobs();
-
-let fileName = process.env.FILE_ASH;
-const CONCURRENCY_LIMIT = 100; // Number of concurrent requests
-
-
+import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
-let logger = createCustomLogger(fileName);
+import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
-let EMBED = false;
+const fileHandler = new FileHandler();
+const defaultFilterJob = new FilterJobs();
 
-export const getFilteredAshJobs = async () => {
-    logger = createCustomLogger(fileName);
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-    const startTimer = new Date();
+const ASHBY_BASE_URL = 'https://jobs.ashbyhq.com/';
+const CONCURRENCY_LIMIT = 50;   // max parallel HTTP requests / filter evaluations
+const REQUEST_TIMEOUT_MS = 15000;
+const RETRY_DELAY_MS = 10000;   // wait 10s before retrying a failed/rate-limited request
+const MAX_RETRIES = 2;
 
-    console.log("Start filtering Ash jobs:", startTimer);
-    logger.info(`Start filtering Ash jobs: ${startTimer}`);
-    const filtered_ash_list = await filterAshJobs();
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-    console.log("Filtering started for Ash Jobs:", new Date());
-    console.log("Number of jobs after filtering:", filtered_ash_list.length);
-    fileHandler.writeToExcel(filtered_ash_list, fileName);
-    // total number of jobs filtered
-    console.log(filtered_ash_list.length);
-    logger.info(`Number of jobs after filtering: ${filtered_ash_list.length}`);
-    console.log("Time taken to filter Ash Jobs: : " + (Date.now() - startTimer) / 1000 + " seconds");
-    logger.info(`Time taken to filter Ash Jobs: : ${(Date.now() - startTimer) / 1000} seconds`);
-    return filtered_ash_list;
-}
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const getAllCompanies = async () => {
-    const basURL = "https://jobs.ashbyhq.com/";
-    fileName = process.env.FILE_ASH;
-    const csvFile = `app/companies/ashbyhq/${fileName}.csv`;
-    const csvData = readFileSync(csvFile, 'utf8');
-    const rows = csvData.split('\n').map(row => row.toLowerCase().trim()).filter(row => row.length > 0);
-    const company_set = new Set(rows);
-    const company_list = Array.from(company_set).map(companyName => ({
-        name: companyName,
-        link: basURL + companyName
-    }));
+const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
 
-    // fileHandler.writeToCsvCompanyNames(company_set.sort(), "gh-embed-ez-all");
-    // process.exit();
-    console.log(company_list.length);
-    logger.info(`Number of companies for Ash: ${company_list.length}`);
-    return company_list;
-}
+// ─── Step 1: Load Companies ───────────────────────────────────────────────────
 
-export const getAshJobs = async () => {
-    console.log("inside get Ash jobs");
-
-    const company_list = await getAllCompanies();
-    const ash_list = [];
-    const limit = pLimit(CONCURRENCY_LIMIT);
-
-    async function fetchJobData(company) {
-        let requestCount = 0;
-        const MAX_REQUESTS = 100; // Adjust this value based on your rate limit
-
-        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-        let company_jobs_url = company.link;
-
-        try {
-                // Rate limiting logic
-                if (requestCount >= MAX_REQUESTS) {
-                    console.log("Rate limit reached, waiting for 10 seconds...");
-                    await delay(10000);
-                    requestCount = 0; // Reset the counter after waiting
-                }
-
-                let response = await axios.get(company_jobs_url);
-                requestCount++; // Increment the request counter
-
-                if (response.status === 200) {
-                    const htmlDom = new jsdom.JSDOM(response.data);
-                    const document = htmlDom.window.document;
-
-                    const scriptTag = Array.from(document.querySelectorAll('script')).find(
-                        script => script.textContent.includes('window.__appData')
-                    );
-                    // get all the jobs from the scriptTag
-                    if (scriptTag) {
-                        const scriptContent = scriptTag.textContent;
-                        const appDataMatch = scriptContent.match(/window\.__appData\s*=\s*({[\s\S]*?});/);
-
-                        if (appDataMatch) {
-                            const appDataStr = appDataMatch[1];
-                            const appData = JSON.parse(appDataStr);
-
-                            if (appData.jobBoard && appData.jobBoard.jobPostings) {
-                                
-                                const jobPostingsFromBaseUrl = appData.jobBoard.jobPostings;
-
-                                for (const job of jobPostingsFromBaseUrl) {
-                                    let posting_date = job.updatedAt;
-
-                                    if (await filterJob.postingDateChecker(posting_date)) {
-                                        // Convert the DateTime formatted posting_date to date
-                                        posting_date = new Date(posting_date).toISOString().split('T')[0];
-                                        const extractedJob = {
-                                            job_id: job.jobId,
-                                            job_title: job.title,
-                                            posting_date: posting_date,
-                                            location: job.locationName,
-                                            company_name: company.name,
-                                            // add / between company_jobs_url and job.id
-                                            job_link: company_jobs_url + '/' + job.id
-                                        };
-
-                                        if (extractedJob.job_id) {
-                                            ash_list.push(extractedJob);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+/**
+ * Reads a CSV of Ashby company slugs, deduplicates them, and returns an array
+ * of { name, link } objects ready for scraping.
+ *
+ * The CSV is expected to have one slug per line (e.g. "stripe", "openai").
+ * Slugs are lowercased and trimmed to avoid URL issues downstream.
+ */
+/**
+ * {
+                        "id": "850d995e-221c-46cf-bdc0-5c61bf555381",
+                        "title": "Software Support Engineer",
+                        "updatedAt": "2026-02-19T18:14:01.106Z",
+                        "suppressDescriptionOpening": false,
+                        "suppressDescriptionClosing": false,
+                        "departmentId": "780d80e0-d659-47c1-b05a-d9729d6aeef4",
+                        "departmentName": "Engineering",
+                        "departmentExternalName": null,
+                        "locationId": "4d661e75-87bb-4f3f-8a23-f803e925fdc7",
+                        "locationName": "Remote",
+                        "locationExternalName": null,
+                        "workplaceType": "Remote",
+                        "employmentType": "FullTime",
+                        "isListed": true,
+                        "jobId": "0c4a9a34-5b25-431c-b64f-05a5c0f4de5e",
+                        "jobRequisitionId": "100",
+                        "teamId": "780d80e0-d659-47c1-b05a-d9729d6aeef4",
+                        "teamName": "Engineering",
+                        "teamExternalName": null,
+                        "publishedDate": "2025-09-22",
+                        "applicationDeadline": null,
+                        "shouldDisplayCompensationOnJobBoard": true,
+                        "secondaryLocations": [],
+                        "compensationTierSummary": "$90K – $125K",
+                        "userRoles": []
                     }
-                } else {
-                    console.log("Error fetching jobs:", company.link, response.statusText);
-                    logger.error(`Error fetching jobs for company: ${company.name} url: ${company_jobs_url}`, response.statusText);
-                }
-            
-        } catch (err) {
-            console.log("Error fetching jobs:", company.link, err.message);
-            logger.error(`Error fetching jobs for company: ${company.name} url: ${company_jobs_url} msg: ${err.message}`, err.message);
-            // wait for 10 seconds and try again
-            await delay(10000);
-            // return fetchJobData(company);
-        }
-    };
+ */
+const loadCompanies = (fileName, logger) => {
+    const csvFilePath = `app/companies/ashbyhq/${fileName}.csv`;
+    logger.info(`Loading companies from: ${csvFilePath}`);
 
-    // const fetchJobsPromises = company_list.map(company => limit(() => fetchJobData(company)));
-    // process all companies in multiple batches
-    // for (let i = 0; i < company_list.length; i += CONCURRENCY_LIMIT) {
-    //     const batch = company_list.slice(i, i + CONCURRENCY_LIMIT);
-    //     const batchResults = await Promise.all(batch.map(company => limit(() => fetchJobData(company))));
-    //     ash_list.push(...batchResults.filter(job => job !== null));
-    // }
-    const fetchJobsPromises = company_list.map(company => fetchJobData(company));
-    await Promise.all(fetchJobsPromises);
-    return ash_list;
+    try {
+        const rows = readFileSync(csvFilePath, 'utf8')
+            .split('\n')
+            .map((row) => row.toLowerCase().trim())
+            .filter(Boolean);
 
+        // Wrap in a Set to silently drop any duplicate slugs in the CSV
+        const companies = [...new Set(rows)].map((name) => ({
+            name,
+            link: `${ASHBY_BASE_URL}${name}`,
+        }));
+
+        logger.info(`Companies loaded: ${companies.length}`);
+        return companies;
+    } catch (error) {
+        logger.error(`Failed to load companies CSV: ${error.message}`);
+        throw error;
+    }
 };
 
-export const filterAshJobs = async () => {
-    console.log("Inside filter Ash jobs");
-    logger.info(`Inside filter Ash jobs`);
-    const ash_list = await getAshJobs();
-    console.log("Total number of jobs found:", ash_list.length);
-    logger.info(`Total number of jobs found: ${ash_list.length}`);
-    const filtered_ash_list = [];
-    const limit = pLimit(CONCURRENCY_LIMIT);
+// ─── Step 2: Scrape Jobs ──────────────────────────────────────────────────────
 
-    const filterJobData = async (data) => {
-        try {
-            if (!data || !data.job_link) {
-                return null;
-            }
-            const location_to_check = data.location.toLowerCase();
-            const location_matched = await filterJob.matchJobsToChecker(location_to_check, false, true);
-    
-            if (location_matched) {
-                const title_to_check = data.job_title.toLowerCase();
-                const title_matched = await filterJob.matchJobsToChecker(title_to_check, true, false);
-    
-                if (title_matched) {
-                    return data;
+/**
+ * Fetches a single company's Ashby job board page and returns all job
+ * postings mapped to our schema (unfiltered). Retries on failure or
+ * rate-limiting (429) up to MAX_RETRIES times.
+ *
+ * Filtering (date, location, title) and SQLite writes happen later in
+ * applyJobFilters so all postings are available for the fast/slow path.
+ *
+ * @param {object} company     - { name, link }
+ * @param {number} retriesLeft
+ * @param {Logger} logger
+ * @returns {object[]}         - mapped job objects, or [] on any failure
+ */
+const scrapeJobsForCompany = async (company, retriesLeft, logger) => {
+    try {
+        const response = await axios.get(company.link, { timeout: REQUEST_TIMEOUT_MS });
+
+        if (response.status !== 200) {
+            logger.warn(`Non-200 response for ${company.name} [${response.status}] — ${company.link}`);
+            return [];
+        }
+
+        const jobPostings = extractJobPostingsFromHtml(response.data);
+
+        if (!jobPostings) {
+            // The page loaded but didn't contain the expected __appData structure.
+            // This can happen if Ashby changes their frontend or the board is empty.
+            logger.warn(`No job postings found in page data for: ${company.name}`);
+            return [];
+        }
+
+        const jobs = mapPostings(jobPostings, company);
+        logger.debug(`${company.name}: ${jobs.length} postings found`);
+        return jobs;
+
+    } catch (err) {
+        if (retriesLeft > 0) {
+            const reason = err.response?.status === 429 ? 'rate limited (429)' : err.message;
+            logger.warn(`Retrying ${company.name} (${retriesLeft} left) — ${reason}`);
+            await delay(RETRY_DELAY_MS);
+            return scrapeJobsForCompany(company, retriesLeft - 1, logger);
+        }
+
+        logger.error(`Scrape failed for ${company.name} [${company.link}]: ${err.message}`);
+        recordScrapeError('ashby');
+        return [];
+    }
+};
+
+/**
+ * Parses raw HTML from an Ashby job board page and extracts the job postings
+ * array embedded in the page's `window.__appData` script tag.
+ *
+ * Ashby inlines all job data as JSON in the HTML rather than via a separate API,
+ * so we parse the DOM to find and extract that script block.
+ *
+ * Returns null if the expected data structure is absent or malformed.
+ */
+const extractJobPostingsFromHtml = (html) => {
+    const marker = 'window.__appData = ';
+    const start = html.indexOf(marker);
+    if (start === -1) return null;
+
+    // Walk forward from the opening brace, counting brackets
+    // to find the exact closing brace of the JSON object
+    let depth = 0;
+    let jsonStart = -1;
+
+    for (let i = start + marker.length; i < html.length; i++) {
+        if (html[i] === '{') {
+            if (jsonStart === -1) jsonStart = i;
+            depth++;
+        } else if (html[i] === '}') {
+            depth--;
+            if (depth === 0) {
+                try {
+                    const appData = JSON.parse(html.slice(jsonStart, i + 1));
+                    return appData?.jobBoard?.jobPostings ?? null;
+                } catch {
+                    return null;
                 }
             }
-            return null;
-        } catch (error) {
-            console.log("Error filtering job data for company:", error.message);
-            logger.error(`Error filtering job data for company: ${error.message}`);
         }
-    };
+    }
 
-    // Process all jobs in a single batch
-    const filteredJobs = await Promise.all(
-        ash_list.map(job => limit(() => filterJobData(job)))
+    return null;
+};
+
+/**
+ * Maps raw Ashby job postings to our internal job schema.
+ *
+ * This is a pure mapping step — no filtering, no I/O. Postings without a
+ * jobId are skipped because they can't be reliably deduplicated by job_link.
+ * All other postings are returned regardless of date, location, or title so
+ * that applyJobFilters can store and evaluate them via the fast/slow path.
+ *
+ * @param {object[]} jobPostings - raw postings from window.__appData
+ * @param {object}   company     - { name, link }
+ * @returns {object[]}
+ */
+const mapPostings = (jobPostings, company) => {
+    return jobPostings
+        .filter((posting) => posting.jobId)  // jobId required for deduplication
+        .map((posting) => ({
+            job_id:       posting.jobId,
+            job_title:    posting.title,
+            posting_date: posting.updatedAt
+                ? new Date(posting.updatedAt).toISOString().split('T')[0]
+                : null,
+            location:     posting.locationName ?? '',
+            company_name: company.name,
+            job_link:     `${company.link}/${posting.id}`,
+        }));
+};
+
+/**
+ * Fans out scraping across all companies concurrently and collects results.
+ * pLimit caps simultaneous requests to avoid overwhelming the target or
+ * triggering aggressive rate limiting.
+ *
+ * @param {object[]} companies
+ * @param {Logger}   logger
+ * @returns {object[]} flat array of all mapped job objects from all companies
+ */
+const scrapeAllCompanies = async (companies, logger) => {
+    const startTime = Date.now();
+    logger.info(`Starting concurrent scrape for ${companies.length} companies (limit: ${CONCURRENCY_LIMIT})`);
+
+    const limit = pLimit(CONCURRENCY_LIMIT);
+    const results = await Promise.all(
+        companies.map((company) => limit(() => scrapeJobsForCompany(company, MAX_RETRIES, logger)))
     );
-    filtered_ash_list.push(...filteredJobs.filter(Boolean));
-    // Use native sort with a comparison function
-    return filtered_ash_list.sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+
+    const allJobs = results.flat();
+    const companiesWithJobs = results.filter((r) => r.length > 0).length;
+
+    logger.info(
+        `Scrape complete in ${formatElapsed(startTime)}s — ` +
+        `${allJobs.length} jobs from ${companiesWithJobs}/${companies.length} companies`
+    );
+
+    return allJobs;
+};
+
+// ─── Step 3: Filter Jobs ──────────────────────────────────────────────────────
+
+/**
+ * Runs a single job through the full filter pipeline, with two execution paths:
+ *
+ * FAST PATH (job already in SQLite from a previous run):
+ *   - Use cached title, location, and posting_date — no HTTP calls needed.
+ *   - Apply all three filters against cached data and return.
+ *   - Note: unlike Lever, Ashby always stores posting_date (it comes from the
+ *     API response), so a NULL cached date means the posting had no updatedAt.
+ *
+ * SLOW PATH (new job, not yet in SQLite):
+ *   - Store the job immediately (with date from API) so future runs take the
+ *     fast path regardless of whether this job passes all filters.
+ *   - Apply location, title, and date filters in order and return or null.
+ *
+ * @param {object}     job
+ * @param {Logger}     logger
+ * @param {FilterJobs} filterJob
+ * @returns {object|null} job if it passes all filters, null otherwise
+ */
+const applyJobFilters = async (job, logger, filterJob) => {
+    if (!job?.job_link) return null;
+
+    try {
+        // ── Fast path: job was seen on a previous run ──────────────────────────
+        const cached = getJob(job.job_link);
+
+        if (cached) {
+            if (!filterJob.matchesLocation(cached.location))         return null;
+            if (!filterJob.matchesTitle(cached.job_title))           return null;
+            if (!cached.posting_date)                                return null;
+            if (!filterJob.matchesPostingDate(cached.posting_date))  return null;
+            return cached;
+        }
+
+        // ── Slow path: new job not yet in the database ──────────────────────────
+        // Store first (date already available from API) so future runs use fast path.
+        upsertJob(job, 'ashby');
+
+        if (!filterJob.matchesLocation(job.location))        return null;
+        if (!filterJob.matchesTitle(job.job_title))          return null;
+        if (!job.posting_date)                               return null;
+        if (!filterJob.matchesPostingDate(job.posting_date)) return null;
+
+        return job;
+
+    } catch (error) {
+        logger.error(`Filter error for job [${job.job_link}]: ${error.message}`);
+        return null;
+    }
+};
+
+/**
+ * Applies location, title, and date filters to all scraped jobs concurrently.
+ * SQLite writes happen inside applyJobFilters so ALL jobs are persisted,
+ * not just the ones that pass. Survivors are sorted by posting date descending.
+ */
+const filterJobs = async (jobs, logger, filterJob) => {
+    const startTime = Date.now();
+    logger.info(`Filtering ${jobs.length} jobs by location, title, and date rules`);
+
+    const limit = pLimit(CONCURRENCY_LIMIT);
+    const results = await Promise.all(jobs.map((job) => limit(() => applyJobFilters(job, logger, filterJob))));
+
+    const validJobs = results
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.posting_date) - new Date(a.posting_date));
+
+    logger.info(
+        `Filtering complete in ${formatElapsed(startTime)}s — ` +
+        `${validJobs.length} passed, ${jobs.length - validJobs.length} rejected`
+    );
+
+    return validJobs;
+};
+
+// ─── Main Orchestrator ────────────────────────────────────────────────────────
+
+/**
+ * Entry point for the AshbyHQ scraper pipeline.
+ *
+ * Orchestrates three stages in sequence:
+ *   1. Load company slugs from CSV
+ *   2. Scrape each company's job board (all postings, unfiltered)
+ *   3. Filter by location, title, and date
+ *   4. Write surviving jobs to an Excel file
+ *
+ * Key design notes:
+ *   - SQLite writes happen inside applyJobFilters (not here) so ALL scraped
+ *     jobs are persisted — not just the filtered ones. Subsequent runs use
+ *     the fast path (cached data, zero HTTP calls per job) for any job seen
+ *     before, regardless of whether it passed filters last time.
+ *   - Unlike Lever, Ashby provides posting_date directly in the API response,
+ *     so there is no per-job HTTP fetch at any point in the pipeline.
+ *   - All output goes through the structured logger — no console.log.
+ *   - StatsD metrics are emitted so dashboards show volume and yield per run.
+ *
+ * @param {FilterJobs} filterJob - per-request config; defaults to env-based singleton
+ * @returns {object[]} final filtered job array
+ */
+export const runAshScraper = async (filterJob = defaultFilterJob) => {
+    const fileName = process.env.FILE_ASH;
+    const logger = createCustomLogger(fileName);
+    const startTime = Date.now();
+
+    logger.info(`=== AshbyHQ Job Scraper Started | ${new Date().toISOString()} ===`);
+
+    try {
+        const companies = loadCompanies(fileName, logger);
+
+        const scrapedJobs = await scrapeAllCompanies(companies, logger);
+
+        // SQLite writes happen inside filterJobs → applyJobFilters.
+        // All scraped jobs (pass or fail) are stored for fast-path reuse.
+        const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob);
+
+        recordScrapeMetrics('ashby', {
+            durationMs:     Date.now() - startTime,
+            companiesTotal: companies.length,
+            jobsScraped:    scrapedJobs.length,
+            jobsFiltered:   filteredJobs.length,
+        });
+
+        if (filteredJobs.length > 0) {
+            fileHandler.writeToExcel(filteredJobs, fileName);
+            logger.info(`Excel file created with ${filteredJobs.length} jobs`);
+        } else {
+            logger.info('No jobs passed filtering — skipping file creation');
+        }
+
+        logger.info(`=== AshbyHQ Scraper Finished in ${formatElapsed(startTime)}s ===`);
+
+        return filteredJobs;
+
+    } catch (error) {
+        logger.error(`Fatal error in runAshScraper: ${error.message}`);
+        throw error;
+    }
 };
