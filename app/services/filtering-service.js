@@ -1,190 +1,258 @@
 import { config } from 'dotenv';
-import { readFileSync } from 'fs';
 config();
 
+/**
+ * Optimized TitleChecker using Sets for O(1) lookups
+ * Implements simple substring matching without expensive combination generation
+ */
 class TitleChecker {
-    constructor() {
-        const jobTitles = process.env.JOB_TITLES.split(",").map(title => title.trim().toLowerCase());
-        const ignoreTitles = process.env.IGNORE_TITLES.split(",").map(title => title.trim().toLowerCase());
+    constructor(config = {}) {
+        const jobTitles = config.job_titles
+            ?? process.env.JOB_TITLES.split(",").map(t => t.trim().toLowerCase());
+        const ignoreTitles = config.ignore_titles
+            ?? process.env.IGNORE_TITLES.split(",").map(t => t.trim().toLowerCase());
 
-        //store all the job titles in a map, if the key is present then do not add it again else increment the value with every key
-        this.jobTitlesMap = new Map();
-        jobTitles.forEach(title => this.jobTitlesMap.set(title, this.jobTitlesMap.has(title) ? this.jobTitlesMap.get(title) + 1 : 1));
-
-        this.ignoreTitlesMap = new Map();
-        ignoreTitles.forEach(title => this.ignoreTitlesMap.set(title, this.ignoreTitlesMap.has(title) ? this.ignoreTitlesMap.get(title) + 1 : 1));
-
+        this.jobTitlesSet = new Set(jobTitles);
+        this.ignoreTitlesSet = new Set(ignoreTitles);
     }
 
-    isJobPresentAccept(title) {
-        if (this.jobTitlesMap.has(title)) {
+    /**
+     * Fast title matching using word boundary checks
+     * @param {string} title - Job title to check
+     * @returns {boolean} - True if title matches acceptance criteria
+     */
+    matchesAcceptedTitle(title) {
+        const lowerTitle = title.toLowerCase();
+        
+        // Check for exact match first (fastest path)
+        if (this.jobTitlesSet.has(lowerTitle)) {
             return true;
         }
-        return false;
-    }
 
-    isJobPresentReject(title) {
-        if (this.ignoreTitlesMap.has(title)) {
-            return true;
-        }
-        return false;
-    }
-
-}
-
-class LocationChecker {
-    constructor() {
-        const countries = process.env.COUNTRIES.split(",").map(location => location.trim().toLowerCase());
-        this.countriesMap = new Map();
-        countries.forEach(location => this.countriesMap.set(location, this.countriesMap.has(location) ? this.countriesMap.get(location) + 1 : 1));
-
-        const states = process.env.STATES.split(",").map(location => location.trim().toLowerCase());
-        this.statesMap = new Map();
-        states.forEach(location => this.statesMap.set(location, this.statesMap.has(location) ? this.statesMap.get(location) + 1 : 1));
-
-        const statesAbbr = process.env.STATES_ABBR.split(",").map(location => location.trim().toLowerCase());
-        this.statesAbbrMap = new Map();
-        statesAbbr.forEach(location => this.statesAbbrMap.set(location, this.statesAbbrMap.has(location) ? this.statesAbbrMap.get(location) + 1 : 1));
-
-    }
-
-    isCountryPresent(location) {
-        if (this.countriesMap.has(location)) {
-            return true;
-        }
-    }
-
-    async isCountryPresentWorkday(location) {
-        if (this.countriesMap.has(location)) {
-            return true;
-        }
-    }
-
-    isStatePresent(location) {
-        if (this.statesMap.has(location)) {
-            return true;
-        }
-    }
-
-    isStateAbbrPresent(location) {
-        if (this.statesAbbrMap.has(location)) {
-            return true;
-        }
-    }
-}
-class FilterJobs {
-
-    constructor() {
-        this.locationChecker = new LocationChecker();
-        this.titleChecker = new TitleChecker();
-    }
-
-    async getCombinations(part, r) {
-        let result = [];
-        this.generateCombinations(part, r, 0, [], result);
-        return result;
-    }
-
-    async generateCombinations(part, r, index, current, result) {
-        if (current.length === r) {
-            result.push([...current]);
-            return;
-        }
-        if (index === part.length) return;
-        this.generateCombinations(part, r, index + 1, [...current, part[index]], result);
-        this.generateCombinations(part, r, index + 1, current, result);
-    }
-
-    // /**
-    //  * Generates all possible combinations of elements in the array `parts` of length `combinationLength`.
-    //  * Uses memoization to cache results for efficiency.
-    //  * @param {Array} parts - The array of elements to generate combinations from.
-    //  * @param {number} combinationLength - The length of each combination.
-    //  * @returns {Array} - An array of combinations.
-    //  */
-    // getCombinations(parts, combinationLength) {
-    //     const cacheKey = `${parts.join(',')}-${combinationLength}`;
-    //     if (this.combinationCache.has(cacheKey)) {
-    //         return this.combinationCache.get(cacheKey);
-    //     }
-
-    //     let combinations = [];
-    //     this.generateCombinations(parts, combinationLength, 0, [], combinations);
-    //     this.combinationCache.set(cacheKey, combinations);
-    //     return combinations;
-    // }
-
-    // /**
-    //  * Recursively generates combinations of elements from `parts` of length `combinationLength`.
-    //  * @param {Array} parts - The array of elements to generate combinations from.
-    //  * @param {number} combinationLength - The length of each combination.
-    //  * @param {number} startIndex - The current index in the array `parts`.
-    //  * @param {Array} currentCombination - The current combination being built.
-    //  * @param {Array} allCombinations - The array to store all valid combinations.
-    //  */
-    // generateCombinations(parts, combinationLength, startIndex, currentCombination, allCombinations) {
-    //     if (currentCombination.length === combinationLength) {
-    //         allCombinations.push([...currentCombination]);
-    //         return;
-    //     }
-    //     if (startIndex === parts.length) return;
-    //     this.generateCombinations(parts, combinationLength, startIndex + 1, [...currentCombination, parts[startIndex]], allCombinations);
-    //     this.generateCombinations(parts, combinationLength, startIndex + 1, currentCombination, allCombinations);
-    // }
-
-    async matchJobsToChecker(word, checkTitle = false, checkLocation = false, portal) {
-        let wordParts = word.split(' ').map(part => part.trim().toLowerCase());
-
-        const validParts = wordParts
-            .filter(part => part)
-            .map(part => (part.slice(-1).match(/[a-zA-Z]/) ? part : part.slice(0, -1)));
-
-        if (validParts.length === 0 || validParts.length > 20) return false;
-
-        for (let r = 0; r <= 2; r++) {
-            for (let combo of await this.getCombinations(validParts, r)) {
-                let searchWord = combo.join(' ');
-                // let searchWordLen = searchWord.length;
-                if (checkTitle) {
-                    if (this.titleChecker.isJobPresentAccept(searchWord)) {
-                        return true;
-                    }
-                    if (this.titleChecker.isJobPresentReject(searchWord)) {
-                        return false;
-                    }
-                }
-                if (checkLocation) {
-                    if (this.locationChecker.isCountryPresent(searchWord) ||
-                        this.locationChecker.isStatePresent(searchWord) ||
-                        this.locationChecker.isStateAbbrPresent(searchWord)) {
-                        return true;
-                    }
-                }
+        // Check if any accepted keyword appears as a whole word in the title
+        for (const keyword of this.jobTitlesSet) {
+            if (this.containsWord(lowerTitle, keyword)) {
+                return true;
             }
         }
+        
         return false;
     }
 
-    async postingDateChecker(postingDate) {
-        let currDate = new Date();
-        // format the current date to the same format as the posting date(YYYY-MM-DD)
-        let formatted_date = new Date(postingDate);
-        const diffTime = Math.abs(currDate - formatted_date);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays <= process.env.POSTING_DIFF) {
+    /**
+     * Fast title rejection using word boundary checks
+     * @param {string} title - Job title to check
+     * @returns {boolean} - True if title should be rejected
+     */
+    matchesRejectedTitle(title) {
+        const lowerTitle = title.toLowerCase();
+        
+        // Check for exact match first
+        if (this.ignoreTitlesSet.has(lowerTitle)) {
             return true;
         }
+
+        // Check if any ignored keyword appears as a whole word in the title
+        for (const keyword of this.ignoreTitlesSet) {
+            if (this.containsWord(lowerTitle, keyword)) {
+                return true;
+            }
+        }
+        
         return false;
     }
 
+    /**
+     * Check if a word exists in text with word boundaries
+     * @param {string} text - Text to search in
+     * @param {string} word - Word to search for
+     * @returns {boolean}
+     */
+    containsWord(text, word) {
+        // Use word boundary regex for accurate matching
+        // \b ensures we match whole words only
+        const regex = new RegExp(`\\b${this.escapeRegex(word)}\\b`, 'i');
+        return regex.test(text);
+    }
+
+    /**
+     * Escape special regex characters
+     */
+    escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
 }
 
-// const titleChecker = new TitleChecker();
-// const locationChecker = new LocationChecker();
-// const filterJob = new FilterJobs();
+/**
+ * Optimized LocationChecker using Sets for O(1) lookups
+ */
+class LocationChecker {
+    constructor(config = {}) {
+        const countries = config.countries
+            ?? process.env.COUNTRIES.split(",").map(l => l.trim().toLowerCase());
+        const states = config.states
+            ?? process.env.STATES.split(",").map(l => l.trim().toLowerCase());
+        const statesAbbr = config.states_abbr
+            ?? process.env.STATES_ABBR.split(",").map(l => l.trim().toLowerCase());
 
-// export { titleChecker, locationChecker, filterJob };
-export { TitleChecker, LocationChecker, FilterJobs }
+        this.countriesSet = new Set(countries);
+        this.statesSet = new Set(states);
+        this.statesAbbrSet = new Set(statesAbbr);
+    }
 
+    /**
+     * Fast location matching using word boundary checks
+     * @param {string} location - Location string to check
+     * @returns {boolean} - True if location matches US/Canada criteria
+     */
+    matchesLocation(location) {
+        const lowerLocation = location.toLowerCase();
+        
+        // Check exact matches first (fastest)
+        if (this.countriesSet.has(lowerLocation) || 
+            this.statesSet.has(lowerLocation) || 
+            this.statesAbbrSet.has(lowerLocation)) {
+            return true;
+        }
 
+        // Check if location contains any valid country
+        for (const country of this.countriesSet) {
+            if (this.containsWord(lowerLocation, country)) {
+                return true;
+            }
+        }
 
+        // Check if location contains any valid state
+        for (const state of this.statesSet) {
+            if (this.containsWord(lowerLocation, state)) {
+                return true;
+            }
+        }
+
+        // Check for state abbreviations with word boundaries
+        for (const abbr of this.statesAbbrSet) {
+            if (this.containsWord(lowerLocation, abbr)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check if a word exists in text with word boundaries
+     */
+    containsWord(text, word) {
+        const regex = new RegExp(`\\b${this.escapeRegex(word)}\\b`, 'i');
+        return regex.test(text);
+    }
+
+    /**
+     * Escape special regex characters
+     */
+    escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+}
+
+/**
+ * Optimized FilterJobs - simplified interface without expensive combination generation
+ */
+class FilterJobs {
+    constructor(config = {}) {
+        this.locationChecker = new LocationChecker(config);
+        this.titleChecker = new TitleChecker(config);
+        this.postingDiff = config.posting_diff ?? parseInt(process.env.POSTING_DIFF || 10);
+    }
+
+    /**
+     * Check if job title passes filters
+     * @param {string} title - Job title to check
+     * @returns {boolean} - True if title is valid
+     */
+    matchesTitle(title) {
+        if (!title || typeof title !== 'string') {
+            return false;
+        }
+
+        // First check if title should be rejected
+        if (this.titleChecker.matchesRejectedTitle(title)) {
+            return false;
+        }
+
+        // Then check if title is accepted
+        return this.titleChecker.matchesAcceptedTitle(title);
+    }
+
+    /**
+     * Check if job location passes filters
+     * @param {string} location - Job location to check
+     * @returns {boolean} - True if location is valid
+     */
+    matchesLocation(location) {
+        if (!location || typeof location !== 'string') {
+            return false;
+        }
+
+        return this.locationChecker.matchesLocation(location);
+    }
+
+    /**
+     * Check if posting date is within acceptable range
+     * @param {string} postingDate - Date string to check
+     * @returns {boolean} - True if within POSTING_DIFF days
+     */
+    matchesPostingDate(postingDate) {
+        if (!postingDate) {
+            return false;
+        }
+
+        try {
+            const currDate = new Date();
+            const postedDate = new Date(postingDate);
+            
+            // Check if date is valid
+            if (isNaN(postedDate.getTime())) {
+                return false;
+            }
+
+            const diffTime = Math.abs(currDate - postedDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return diffDays <= this.postingDiff;
+        } catch (error) {
+            console.error('Error checking posting date:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Check if job passes all filters
+     * @param {Object} job - Job object with title, location, posting_date
+     * @returns {boolean} - True if job passes all filters
+     */
+    matchesAllCriteria(job) {
+        if (!job) {
+            return false;
+        }
+
+        // Check posting date first (fastest rejection)
+        if (job.posting_date && !this.matchesPostingDate(job.posting_date)) {
+            return false;
+        }
+
+        // Check location
+        if (!this.matchesLocation(job.location)) {
+            return false;
+        }
+
+        // Check title last (might be most selective)
+        if (!this.matchesTitle(job.job_title)) {
+            return false;
+        }
+
+        return true;
+    }
+}
+
+export { TitleChecker, LocationChecker, FilterJobs };

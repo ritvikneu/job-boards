@@ -1,0 +1,30 @@
+{
+  "job_titles": [
+    "software engineer intern",
+    "software engineering intern",
+    "swe intern",
+    "engineering intern",
+    "intern",
+    "internship",
+    "co-op",
+    "coop",
+    "summer intern",
+    "summer internship",
+    "software intern"
+  ],
+  "ignore_titles": [
+    "senior",
+    "staff",
+    "principal",
+    "lead",
+    "manager",
+    "director"
+  ],
+  "countries": ["usa", "united states", "remote", "us"],
+  "states": [
+    "california", "new york", "texas", "washington", "massachusetts",
+    "illinois", "georgia", "colorado", "florida", "virginia"
+  ],
+  "states_abbr": ["ca", "ny", "tx", "wa", "ma", "il", "ga", "co", "fl", "va"],
+  "posting_diff": 14
+}

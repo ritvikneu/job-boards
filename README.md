@@ -1,121 +1,169 @@
-# Job Boards - Distributed Job Posting Aggregation System
+# Job Boards Scraper
 
-## Overview
-A high-performance distributed system designed to aggregate and process job postings from multiple companies' Job Portals and career pages. The system implements a producer-consumer architecture using RabbitMQ as the message broker, enabling efficient parallel processing and scalable job data handling.
+Node.js/Express API that aggregates software job listings from multiple company job boards, filters them by location, title, and recency, and writes results to Excel.
 
-## Key Features
-- **Multi-source Data Aggregation**: Fetches job postings from multiple Job Portals and career pages
-- **Distributed Processing**: Uses RabbitMQ for distributed job processing
-- **Intelligent Filtering**: Advanced filtering based on multiple criteria
-- **Parallel Processing**: Concurrent job fetching and processing
-- **Rate Limiting**: Smart rate limiting with retry mechanisms
-- **Robust Error Handling**: Comprehensive error management and resilience
-- **Performance Optimized**: Batch processing and configurable concurrency
+---
 
-## System Architecture
+## Stack
 
-### 1. Data Input Layer
-- JSON-based company data management
-- Built-in validation and deduplication
-- Efficient file I/O operations
+| Layer | Technology |
+|---|---|
+| HTTP server | Express 4 |
+| Scraping | axios + jsdom |
+| Filtering | Custom `FilterJobs` (v2) with word-boundary matching |
+| Deduplication / caching | better-sqlite3 (WAL mode) |
+| Queue | RabbitMQ via amqplib (Workday only) |
+| Concurrency | p-limit |
+| Logging | Winston structured JSON |
+| Metrics | StatsD via hot-shots |
+| Output | ExcelJS (.xlsx) |
+| Email | Nodemailer + Mailtrap |
 
-### 2. Job Fetching Layer
-- Workday, Oracle Cloud, Greenhouse, Lever, Dice job portal API integration
-- Offset-based pagination support
-- Configurable filter criteria, including location, job title, and posting date
-- Rate limiting and retry mechanisms
-- Standardized job posting format
+---
 
-### 3. Message Queue Layer
-- RabbitMQ-based message broker
-- Concurrent and Parallel Processing
-- Producer-consumer pattern implementation
-- Batch processing support
-- Reliable message acknowledgment
+## Project Structure
 
-### 4. Processing Layer
-- Multi-criteria job filtering
-- Location validation
-- Posting date verification
-- Job title validation
+```
+app/
+├── app.js                        Express setup (cors, json, routes)
+├── controllers/
+│   └── jobs-controller.js        Route handlers — builds FilterJobs, calls services
+├── routes/
+│   └── jobs-router.js            Route definitions
+├── services/
+│   ├── filtering-service-v2.js   FilterJobs: matchesLocation / matchesTitle / matchesPostingDate
+│   ├── profile-service.js        Named filter profile resolution
+│   ├── greenhouse_v2-service.js  Greenhouse Standard scraper
+│   ├── lever-service.js          Lever scraper
+│   ├── ash2-service.js           Ashby HQ scraper
+│   ├── wday-rabbit.js            Workday scraper (RabbitMQ producer-consumer)
+│   ├── oraclecloud-service.js    Oracle Cloud scraper
+│   ├── dice-service.js           Dice.com scraper
+│   ├── file_creation-service.js  Excel writer + email sender (getLatestJobs)
+│   ├── mail-service.js           Nodemailer transport
+│   └── rabbitMQ-service.js       RabbitMQ connection helpers
+├── database/
+│   └── sqlite-service.js         SQLite schema, read/write helpers, fast-path cache
+├── middleware/
+│   ├── logger.js                 createCustomLogger(name) → Winston instance
+│   └── metrics.js                recordScrapeMetrics / recordScrapeError → StatsD
+├── companies/                    Company lists per portal
+│   ├── greenhouse/
+│   ├── lever/
+│   ├── ashby/
+│   ├── workday/
+│   └── oracle/
+└── templates/
+    ├── blueprint-service.js      Copy-paste template for a new portal scraper
+    └── README.md                 How to use the template + pattern reference
+```
 
-### 5. Output Layer
-- Excel report generation
-- Comprehensive logging
-- Performance metrics tracking
+---
 
-## Performance Features
+## API Routes
+
+All routes accept `GET` with a JSON body.
+
+| Route | Service | Body params |
+|---|---|---|
+| `GET /greenhouse` | `greenhouse_v2-service` | `embed` (bool), filter overrides |
+| `GET /lever` | `lever-service` | filter overrides |
+| `GET /ash` | `ash2-service` | filter overrides |
+| `GET /workday` | `wday-rabbit` | `file_name` (string), filter overrides |
+| `GET /dice` | `dice-service` | `page_number` (int), filter overrides |
+| `GET /oracloud` | `oraclecloud-service` | filter overrides |
+| `GET /latest` | `file_creation-service` | — (sends email with latest results) |
+| `GET /health` | — | — (returns `HEALTH_CHECK` env var) |
+
+### Filter override body
+Every scraper endpoint accepts optional filter overrides in the request body:
+
+```json
+{
+    "profile": "swe",
+    "filters": {
+        "job_titles":    ["engineer", "analyst"],
+        "ignore_titles": ["intern", "manager"],
+        "countries":     ["united states"],
+        "states":        ["california", "new york", "remote"],
+        "states_abbr":   ["ca", "ny", "tx"],
+        "posting_diff":  10
+    }
+}
+```
+
+Resolution order: `body.filters` → `body.profile` (named profile from `app/profiles/`) → `.env` defaults.
+
+---
+
+## Environment Variables
+
+### Filtering (required)
+
+| Variable | Example | Description |
+|---|---|---|
+| `JOB_TITLES` | `engineer,analyst,developer` | Comma-separated title keywords (must include one) |
+| `IGNORE_TITLES` | `intern,manager,director` | Comma-separated title keywords (disqualifies job) |
+| `COUNTRIES` | `united states,canada` | Country keywords for location matching |
+| `STATES` | `california,new york,remote` | Full state names for location matching |
+| `STATES_ABBR` | `ca,ny,tx,remote` | State abbreviations for location matching |
+| `POSTING_DIFF` | `10` | Max job age in days |
+
+### Company file names
+
+| Variable | Default | Description |
+|---|---|---|
+| `FILE_GH` | — | Greenhouse standard company file (no extension) |
+| `FILE_EMBED` | — | Greenhouse embed company file |
+| `FILE_LEVER` | — | Lever company file |
+| `FILE_ASH` | — | Ashby company file |
+| `FILE_WDAY` | `wday1` | Workday company file (wday1 or wday2) |
+| `WORKDAY_OFFSET` | `200` | Max jobs scraped per Workday company |
+
+### Infrastructure
+
+| Variable | Description |
+|---|---|
+| `RABBITMQ_URL` | RabbitMQ connection string (required for Workday) |
+| `STATSD_HOST` | StatsD server host |
+| `STATSD_PORT` | StatsD server port |
+| `HEALTH_CHECK` | String returned by `GET /health` |
+| `SMTP_HOST` | Mail server host |
+| `SMTP_PORT` | Mail server port |
+
+---
+
+## Getting Started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Copy and fill in environment variables
+cp .env.example .env
+
+# Start the server (port 7777)
+pnpm start
+
+# Run tests
+pnpm test
+```
+
+---
+
+## Performance Design
+
+### SQLite fast / slow path (all portals)
+Every job is stored to SQLite on first encounter. Subsequent runs return the cached row immediately — zero HTTP calls per previously-seen job.
+
+### Workday stub pre-filter
+Before queueing individual job-detail fetches, the producer applies `matchesTitle` and `matchesLocation` against the listing stubs (which already contain `title`, `locationsText`, `postedOn`). This eliminates ~85–90 % of the ~15 000 stubs before the expensive consumer stage, cutting first-run time from ~28 min to ~3–4 min.
 
 ### Concurrency
-- Parallel job fetching across companies
-- Dynamic consumer scaling (1-10 consumers)
-- Batch processing (150 messages per consumer)
-- Formula-based consumer scaling: `Math.ceil(jobPostings.length / 1500) + 1`
+`pLimit` caps parallel requests per service. Typical values: 50 (listing pages), 10–20 (detail fetches). Workday consumer uses `pLimit(20)` per batch of 150 messages.
 
-### Rate Limiting
-- MaxConcurrent: 5 requests
-- MinTime: 1000ms between requests
-- Exponential backoff retry mechanism
-- Maximum 3 retries with calculated delays
+---
 
-## Setup and Configuration
+## Adding a New Portal
 
-### Prerequisites
-- Node.js
-- RabbitMQ Server
-- Required NPM packages (see package.json)
-- Docker
-- Postman
-
-### Environment Variables
-- **Job Filtering**
-  - `JOB_TITLES`: List of job titles to search for
-  - `IGNORE_TITLES`: List of titles to exclude from results
-  - `POSTING_DIFF`: Number of days for job posting freshness
-  - `COUNTRIES`, `STATES`, `STATES_ABBR`: Location filtering options
-  - `COUNTRIES_CA`, `STATES_CA`, `STATES_ABBR_CA`: Canadian location options
-
-- **API Configuration**
-  - `WORKDAY_OFFSET`: Pagination offset for Workday API
-  - `MAILTRAP_TOKEN`: Authentication token for email notifications
-  - `CONCURRENCY_LIMIT`: Maximum concurrent API requests
-
-- **Storage Configuration**
-  - `DYNAMODB_TABLE_NAME`: DynamoDB table for data storage
-  - `FILE_NAME`, `FILE_GH`, `FILE_ASH`, `FILE_EMBED`, `FILE_LEVER`, `FILE_WDAY`, `FILE_ORACLOUD`: Input file configurations for different Job Portals
-
-- **System Configuration**
-  - `VALID_PARTS`: Validation parameter length for filtering Job Titles 
-  - `HEALTH_CHECK`: Health check response message
-
-## Monitoring and Logging
-- Execution time tracking
-- Rate limit monitoring
-- Error counting and tracking
-- Queue depth monitoring
-- Operation timestamps
-
-## Error Handling
-- Automatic retry mechanisms
-- Error tracking and logging
-- Graceful degradation
-- Queue-based message recovery
-
-## Scalability
-- Horizontal scaling support
-- Configurable consumer counts
-- Independent process scaling
-- Environment-based tuning
-
-## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-[Add License Information]
-
-## Contact
-[Add Contact Information]
+See [`app/templates/blueprint-service.js`](app/templates/blueprint-service.js) and its [`README`](app/templates/README.md) for the step-by-step guide and all scraping patterns.

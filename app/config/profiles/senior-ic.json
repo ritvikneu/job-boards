@@ -1,0 +1,41 @@
+{
+  "job_titles": [
+    "senior software engineer",
+    "senior swe",
+    "staff software engineer",
+    "staff engineer",
+    "principal engineer",
+    "principal software engineer",
+    "senior backend engineer",
+    "senior frontend engineer",
+    "senior full stack engineer",
+    "lead engineer",
+    "senior platform engineer",
+    "senior devops engineer",
+    "senior site reliability engineer",
+    "senior sre"
+  ],
+  "ignore_titles": [
+    "manager",
+    "director",
+    "vp",
+    "head of",
+    "intern",
+    "internship",
+    "junior",
+    "associate",
+    "entry level"
+  ],
+  "countries": ["usa", "united states", "remote", "us"],
+  "states": [
+    "california", "new york", "texas", "washington", "massachusetts",
+    "illinois", "georgia", "colorado", "florida", "virginia",
+    "new jersey", "north carolina", "oregon", "pennsylvania",
+    "arizona", "michigan", "ohio", "utah", "minnesota", "maryland"
+  ],
+  "states_abbr": [
+    "ca", "ny", "tx", "wa", "ma", "il", "ga", "co", "fl", "va",
+    "nj", "nc", "or", "pa", "az", "mi", "oh", "ut", "mn", "md"
+  ],
+  "posting_diff": 14
+}

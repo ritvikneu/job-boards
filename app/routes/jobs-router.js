@@ -8,8 +8,6 @@ const router = express.Router();
 
 router.route('/greenhouse')
         .get(jobsController.getGreenhouse);
-// router.route('/greenembed')
-//         .get(jobsController.getGreenhouseEmbed);
 router.route('/lever')
         .get(jobsController.getLever);
 router.route('/workday')
@@ -23,7 +21,7 @@ router.route('/latest')
 router.route('/health')
         .get(jobsController.HealthCheck);
 router.route('/ash')
-        .get(jobsController.getAsh);
+        .get(jobsController.getAsh2);
 
 
 export default router;
