@@ -1,5 +1,5 @@
 services:
-    redis:
+    rabbitmq:
         image: "rabbitmq:latest"
         ports:
             - 5672:5672

@@ -16,7 +16,7 @@ const defaultFilterJob = new FilterJobs();
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DICE_API_KEY             = '1YAt0R9wBg4WfsF9VB2778F5CHLAPMVW3WAZcKd8';
+const DICE_API_KEY             = process.env.DICE_API_KEY;
 const DICE_BASE_URL            = 'https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search';
 const MAX_POSITION_CONCURRENCY = 10;    // pLimit for position-ID detail fetches
 const REQUEST_TIMEOUT_MS       = 15000;

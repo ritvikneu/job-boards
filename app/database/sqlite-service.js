@@ -22,9 +22,11 @@ const INIT_SQL = `
         scraped_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    CREATE INDEX IF NOT EXISTS idx_jobs_portal     ON jobs(portal);
-    CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at ON jobs(scraped_at);
-    CREATE INDEX IF NOT EXISTS idx_jobs_job_id     ON jobs(job_id);
+    CREATE INDEX IF NOT EXISTS idx_jobs_portal       ON jobs(portal);
+    CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at   ON jobs(scraped_at);
+    CREATE INDEX IF NOT EXISTS idx_jobs_job_id       ON jobs(job_id);
+    CREATE INDEX IF NOT EXISTS idx_jobs_company_name ON jobs(company_name);
+    CREATE INDEX IF NOT EXISTS idx_jobs_composite    ON jobs(portal, scraped_at);
 `;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -40,6 +42,19 @@ const INIT_SQL = `
 export const initDb = () => {
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
+
+    // ─── Performance PRAGMAs ───────────────────────────────────────────────────
+    // 32MB in-memory page cache (default is ~2MB)
+    db.pragma('cache_size = -32000');
+    // Store temp tables and indices in memory, not on disk
+    db.pragma('temp_store = MEMORY');
+    // 128MB memory-mapped I/O for faster sequential reads
+    db.pragma('mmap_size = 134217728');
+    // NORMAL is safe with WAL and faster than FULL (no fsync after every write)
+    db.pragma('synchronous = NORMAL');
+    // Incremental auto-vacuum so freed pages are reclaimed gradually
+    db.pragma('auto_vacuum = INCREMENTAL');
+
     db.exec(INIT_SQL);
 
     // Migration: add position_id column for existing DBs created before this column existed
@@ -50,6 +65,25 @@ export const initDb = () => {
     }
 
     logger.info(`SQLite initialised — ${DB_PATH}`);
+};
+
+// ─── Maintenance ──────────────────────────────────────────────────────────────
+
+/**
+ * Deletes jobs older than daysToKeep and reclaims freed pages via incremental vacuum.
+ * Call once at startup to keep the database from growing unbounded.
+ *
+ * @param {number} daysToKeep - Jobs older than this many days are removed (default: 30)
+ */
+export const cleanOldJobs = (daysToKeep = 30) => {
+    const result = db.prepare(
+        `DELETE FROM jobs WHERE scraped_at < datetime('now', ? || ' days')`
+    ).run(`-${daysToKeep}`);
+
+    // Reclaim freed space incrementally (not a full VACUUM — avoids long locks)
+    db.pragma('incremental_vacuum');
+
+    logger.info(`cleanOldJobs: removed ${result.changes} jobs older than ${daysToKeep} days`);
 };
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
@@ -122,6 +156,10 @@ export const getJobCount = (portal) => {
  * @param {string} portal - e.g. 'lever', 'ashby', 'greenhouse'
  */
 export const upsertJob = (job, portal) => {
+    if (!job?.job_title || !job?.company_name || !portal) {
+        logger.error('upsertJob: missing required fields (job_title, company_name, or portal) — skipping');
+        return;
+    }
     db.prepare(`
         INSERT OR IGNORE INTO jobs
             (job_link, job_id, job_title, company_name, location, posting_date, position_id, portal)
@@ -175,6 +213,10 @@ export const updateJobPositionId = (job_link, position_id) => {
  */
 export const upsertJobs = (jobs, portal) => {
     if (!jobs.length) return;
+    if (!portal) {
+        logger.error('upsertJobs: portal is required — skipping batch insert');
+        return;
+    }
 
     const insert = db.prepare(`
         INSERT OR IGNORE INTO jobs

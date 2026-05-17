@@ -17,8 +17,8 @@ const defaultFilterJob = new FilterJobs();
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GH_STANDARD_BASE_URL = 'https://job-boards.greenhouse.io/';
-const GH_EMBED_BASE_URL    = 'https://boards.greenhouse.io/embed/job_board?for=';
+export const GH_STANDARD_BASE_URL = 'https://job-boards.greenhouse.io/';
+export const GH_EMBED_BASE_URL    = 'https://boards.greenhouse.io/embed/job_board?for=';
 const GH_STANDARD_ROUTE    = 'routes/$url_token';
 const GH_EMBED_ROUTE       = 'routes/embed.job_board';
 
@@ -45,7 +45,7 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
  * @param {Logger} logger
  * @returns {{ name: string, link: string }[]}
  */
-const loadCompanies = (fileName, baseUrl, logger) => {
+export const loadCompanies = (fileName, baseUrl, logger) => {
     const csvFilePath = `app/companies/greenhouse/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 

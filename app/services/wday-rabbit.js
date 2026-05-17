@@ -257,7 +257,11 @@ const runProducer = async (companies, qname, filterJob, logger) => {
         url:         job.baseURL.slice(0, -5) + job.externalPath,
         companyName: job.companyName,
     }));
-    jobUrls.sort(() => 0.5 - Math.random());
+    // Fisher-Yates shuffle for unbiased random distribution
+    for (let i = jobUrls.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [jobUrls[i], jobUrls[j]] = [jobUrls[j], jobUrls[i]];
+    }
 
     await producer(jobUrls, qname);
     logger.info(`Producer finished in ${formatElapsed(startTime)}s — queued ${jobUrls.length} jobs`);

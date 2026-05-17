@@ -1,169 +1,153 @@
-# Job Boards Scraper
+# Job Board Scraper
 
-Node.js/Express API that aggregates software job listings from multiple company job boards, filters them by location, title, and recency, and writes results to Excel.
+Scrapes six job boards simultaneously and emails you a spreadsheet of new postings — so you can apply the moment a role goes live. Research consistently shows that the first wave of applicants (within the first 24–48 hours) has the highest interview conversion rate; this tool puts you in that wave automatically.
 
----
-
-## Stack
-
-| Layer | Technology |
-|---|---|
-| HTTP server | Express 4 |
-| Scraping | axios + jsdom |
-| Filtering | Custom `FilterJobs` (v2) with word-boundary matching |
-| Deduplication / caching | better-sqlite3 (WAL mode) |
-| Queue | RabbitMQ via amqplib (Workday only) |
-| Concurrency | p-limit |
-| Logging | Winston structured JSON |
-| Metrics | StatsD via hot-shots |
-| Output | ExcelJS (.xlsx) |
-| Email | Nodemailer + Mailtrap |
+**Supported portals:** Greenhouse · Lever · Ashby HQ · Workday · Oracle Cloud · Dice
 
 ---
 
-## Project Structure
+## Quick Start
 
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env — set EMAIL_RECIPIENT, MAILTRAP_TOKEN, and your filter keywords
+
+# 3. Start the server
+pnpm start
+# → Server listening at http://localhost:7777
 ```
-app/
-├── app.js                        Express setup (cors, json, routes)
-├── controllers/
-│   └── jobs-controller.js        Route handlers — builds FilterJobs, calls services
-├── routes/
-│   └── jobs-router.js            Route definitions
-├── services/
-│   ├── filtering-service-v2.js   FilterJobs: matchesLocation / matchesTitle / matchesPostingDate
-│   ├── profile-service.js        Named filter profile resolution
-│   ├── greenhouse_v2-service.js  Greenhouse Standard scraper
-│   ├── lever-service.js          Lever scraper
-│   ├── ash2-service.js           Ashby HQ scraper
-│   ├── wday-rabbit.js            Workday scraper (RabbitMQ producer-consumer)
-│   ├── oraclecloud-service.js    Oracle Cloud scraper
-│   ├── dice-service.js           Dice.com scraper
-│   ├── file_creation-service.js  Excel writer + email sender (getLatestJobs)
-│   ├── mail-service.js           Nodemailer transport
-│   └── rabbitMQ-service.js       RabbitMQ connection helpers
-├── database/
-│   └── sqlite-service.js         SQLite schema, read/write helpers, fast-path cache
-├── middleware/
-│   ├── logger.js                 createCustomLogger(name) → Winston instance
-│   └── metrics.js                recordScrapeMetrics / recordScrapeError → StatsD
-├── companies/                    Company lists per portal
-│   ├── greenhouse/
-│   ├── lever/
-│   ├── ashby/
-│   ├── workday/
-│   └── oracle/
-└── templates/
-    ├── blueprint-service.js      Copy-paste template for a new portal scraper
-    └── README.md                 How to use the template + pattern reference
+
+> **First run:** SQLite is created automatically at `app/data/jobs.db`. Jobs older than 30 days are pruned on every startup.
+
+---
+
+## Endpoints
+
+All scraper endpoints accept an optional JSON body to override filters inline.
+
+| Method | Route | Body params | What it does |
+|--------|-------|-------------|--------------|
+| GET | `/greenhouse` | `embed`, `profile`, `filters` | Scrape Greenhouse job boards |
+| GET | `/lever` | `profile`, `filters` | Scrape Lever job boards |
+| GET | `/workday` | `file_name`, `profile`, `filters` | Scrape Workday (requires RabbitMQ) |
+| GET | `/dice` | `page_number`, `profile`, `filters` | Scrape Dice.com |
+| GET | `/oracloud` | `profile`, `filters` | Scrape Oracle Cloud |
+| GET | `/ash` | `profile`, `filters` | Scrape Ashby HQ |
+| GET | `/latest` | — | Email today's Excel file to `EMAIL_RECIPIENT` |
+| GET | `/health` | — | Returns `HEALTH_CHECK` env value |
+
+**Example:**
+```bash
+curl -X GET http://localhost:7777/greenhouse \
+  -H "Content-Type: application/json" \
+  -d '{"filters": {"posting_diff": 3, "job_titles": ["engineer", "developer"]}}'
 ```
 
 ---
 
-## API Routes
+## Filter Configuration
 
-All routes accept `GET` with a JSON body.
+Filters determine which jobs make it into your spreadsheet. Three levels of priority:
 
-| Route | Service | Body params |
-|---|---|---|
-| `GET /greenhouse` | `greenhouse_v2-service` | `embed` (bool), filter overrides |
-| `GET /lever` | `lever-service` | filter overrides |
-| `GET /ash` | `ash2-service` | filter overrides |
-| `GET /workday` | `wday-rabbit` | `file_name` (string), filter overrides |
-| `GET /dice` | `dice-service` | `page_number` (int), filter overrides |
-| `GET /oracloud` | `oraclecloud-service` | filter overrides |
-| `GET /latest` | `file_creation-service` | — (sends email with latest results) |
-| `GET /health` | — | — (returns `HEALTH_CHECK` env var) |
+```
+body.filters (inline)  >  body.profile (preset file)  >  .env vars (defaults)
+```
 
-### Filter override body
-Every scraper endpoint accepts optional filter overrides in the request body:
+### Environment variable defaults
 
+```env
+JOB_TITLES="engineer,developer,analyst"      # accept jobs containing these words
+IGNORE_TITLES="intern,manager,director"       # reject jobs containing these words
+COUNTRIES="united states,remote"             # accepted country names
+STATES="california,new york,texas,remote"    # accepted state names
+STATES_ABBR="ca,ny,tx"                       # accepted state abbreviations
+POSTING_DIFF=10                              # only jobs posted within N days
+```
+
+Matching uses word-boundary rules — `"engineer"` matches `"Software Engineer"` but not `"reengineering"`.
+
+### Inline override (per-request)
+
+```bash
+curl ... -d '{"filters": {"posting_diff": 1, "states": ["remote"]}}'
+```
+
+### Named profiles
+
+Save a preset to `app/config/profiles/swe-remote.json`:
 ```json
 {
-    "profile": "swe",
-    "filters": {
-        "job_titles":    ["engineer", "analyst"],
-        "ignore_titles": ["intern", "manager"],
-        "countries":     ["united states"],
-        "states":        ["california", "new york", "remote"],
-        "states_abbr":   ["ca", "ny", "tx"],
-        "posting_diff":  10
-    }
+  "job_titles": ["engineer", "developer"],
+  "states": ["remote"],
+  "posting_diff": 2
 }
 ```
 
-Resolution order: `body.filters` → `body.profile` (named profile from `app/profiles/`) → `.env` defaults.
-
----
-
-## Environment Variables
-
-### Filtering (required)
-
-| Variable | Example | Description |
-|---|---|---|
-| `JOB_TITLES` | `engineer,analyst,developer` | Comma-separated title keywords (must include one) |
-| `IGNORE_TITLES` | `intern,manager,director` | Comma-separated title keywords (disqualifies job) |
-| `COUNTRIES` | `united states,canada` | Country keywords for location matching |
-| `STATES` | `california,new york,remote` | Full state names for location matching |
-| `STATES_ABBR` | `ca,ny,tx,remote` | State abbreviations for location matching |
-| `POSTING_DIFF` | `10` | Max job age in days |
-
-### Company file names
-
-| Variable | Default | Description |
-|---|---|---|
-| `FILE_GH` | — | Greenhouse standard company file (no extension) |
-| `FILE_EMBED` | — | Greenhouse embed company file |
-| `FILE_LEVER` | — | Lever company file |
-| `FILE_ASH` | — | Ashby company file |
-| `FILE_WDAY` | `wday1` | Workday company file (wday1 or wday2) |
-| `WORKDAY_OFFSET` | `200` | Max jobs scraped per Workday company |
-
-### Infrastructure
-
-| Variable | Description |
-|---|---|
-| `RABBITMQ_URL` | RabbitMQ connection string (required for Workday) |
-| `STATSD_HOST` | StatsD server host |
-| `STATSD_PORT` | StatsD server port |
-| `HEALTH_CHECK` | String returned by `GET /health` |
-| `SMTP_HOST` | Mail server host |
-| `SMTP_PORT` | Mail server port |
-
----
-
-## Getting Started
-
+Then reference it:
 ```bash
-# Install dependencies
-pnpm install
-
-# Copy and fill in environment variables
-cp .env.example .env
-
-# Start the server (port 7777)
-pnpm start
-
-# Run tests
-pnpm test
+curl ... -d '{"profile": "swe-remote"}'
 ```
 
 ---
 
-## Performance Design
+## Getting Notified
 
-### SQLite fast / slow path (all portals)
-Every job is stored to SQLite on first encounter. Subsequent runs return the cached row immediately — zero HTTP calls per previously-seen job.
+After running any scraper, the results are written to `app/data/Jobs_<date>.xlsx` with one tab per portal. Call `/latest` to have the file emailed to you:
 
-### Workday stub pre-filter
-Before queueing individual job-detail fetches, the producer applies `matchesTitle` and `matchesLocation` against the listing stubs (which already contain `title`, `locationsText`, `postedOn`). This eliminates ~85–90 % of the ~15 000 stubs before the expensive consumer stage, cutting first-run time from ~28 min to ~3–4 min.
+```bash
+curl http://localhost:7777/latest
+```
 
-### Concurrency
-`pLimit` caps parallel requests per service. Typical values: 50 (listing pages), 10–20 (detail fetches). Workday consumer uses `pLimit(20)` per batch of 150 messages.
+Configure the email destination in `.env`:
+```env
+EMAIL_RECIPIENT=you@example.com
+MAILTRAP_TOKEN=your-mailtrap-token   # from https://mailtrap.io
+```
+
+---
+
+## Workday Setup
+
+The `/workday` endpoint uses RabbitMQ to distribute job-detail fetches across parallel workers. Start RabbitMQ before calling it:
+
+```bash
+docker run -d --hostname rabbit --name rabbitmq \
+  -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+Or with Docker Compose:
+```bash
+docker compose up -d
+```
+
+Set in `.env`:
+```env
+RABBITMQ_URL=amqp://localhost
+WORKDAY_OFFSET=200   # max job stubs to fetch per company
+```
 
 ---
 
 ## Adding a New Portal
 
-See [`app/templates/blueprint-service.js`](app/templates/blueprint-service.js) and its [`README`](app/templates/README.md) for the step-by-step guide and all scraping patterns.
+Copy `app/templates/blueprint-service.js` — all patterns (fast/slow SQLite cache path, filter pipeline, metrics, Excel output) are documented inline. Wire it in `app/routes/jobs-router.js` and `app/controllers/jobs-controller.js`.
+
+---
+
+## Architecture
+
+For a detailed walkthrough of the request lifecycle, fast/slow cache path, Workday producer-consumer pipeline, filtering internals, and SQLite schema, see [CONTEXT.md](./CONTEXT.md).
+
+---
+
+## Running Tests
+
+```bash
+pnpm test
+```
+
+Uses Mocha + Supertest. Test file: `tests/test.js`.
