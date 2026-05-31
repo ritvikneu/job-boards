@@ -1,0 +1,34 @@
+[Unit]
+Description=Job Boards scraper API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/boarduser/job-boards
+EnvironmentFile=/opt/boarduser/job-boards/.env
+Type=simple
+User=boarduser
+Group=boardsgroup
+ExecStart=/usr/bin/node /opt/boarduser/job-boards/server.js
+Restart=always
+RestartSec=5
+
+# ─── Hardening ────────────────────────────────────────────────────────────
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/opt/boarduser/job-boards/logs /opt/boarduser/job-boards/reports /opt/boarduser/job-boards/app/data
+
+[Install]
+WantedBy=multi-user.target
+

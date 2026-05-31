@@ -1,4 +1,5 @@
 import * as ghService from "../services/greenhouse-service.js";
+import { runCleanup } from "../services/cleanup-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as ashService from "../services/ash-service.js";
 import * as wday from "../services/wday-rabbit.js";
@@ -28,11 +29,21 @@ const buildFilterJob = (body) => new FilterJobs(resolveFilterConfig(body));
 export const getGreenhouse = async (request, response, next) => {
     try {
         const filterJob = buildFilterJob(request.body);
-        const embed = request.body.embed || false;
-        const res = await ghService.runGreenhouseScraper(embed, filterJob);
+        const res = await ghService.runGreenhouseScraper(filterJob);
         response.json({ message: res });
     } catch (err) {
         logger.error(`getGreenhouse failed: ${err.message}`);
+        next(err);
+    }
+};
+
+export const getCleanup = async (request, response, next) => {
+    try {
+        const portals = request.body?.portals;
+        const result  = await runCleanup({ portals });
+        response.json(result);
+    } catch (err) {
+        logger.error(`getCleanup failed: ${err.message}`);
         next(err);
     }
 };

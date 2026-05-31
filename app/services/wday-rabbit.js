@@ -7,6 +7,7 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
+import { ensureSafeFileName } from './_filename-guard.js';
 import { getJobByJobId, upsertJob } from '../database/sqlite-service.js';
 import { producer, getNextMessages, closeConnection } from './rabbitMQ-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
@@ -79,6 +80,7 @@ const parsePostedOn = (postedOn) => {
  * @returns {{ name: string, link: string }[]}
  */
 const loadCompanies = (fileName, logger) => {
+    ensureSafeFileName(fileName);
     const filePath = `app/companies/workday/${fileName}.json`;
     logger.info(`Loading companies from: ${filePath}`);
 
@@ -86,10 +88,14 @@ const loadCompanies = (fileName, logger) => {
         const raw  = JSON.parse(readFileSync(filePath, 'utf8'));
         const seen = new Set();
 
+        // Normalise name to lowercase on load. Mixed-case entries (e.g.
+        // "Discover", "NordStorm") were producing 422s from the Workday API,
+        // which is sensitive to slug casing in some contract paths.
         const companies = raw.reduce((acc, company) => {
-            if (company.name && !seen.has(company.name)) {
-                seen.add(company.name);
-                acc.push({ name: company.name, link: company.link });
+            const name = company.name ? String(company.name).toLowerCase() : null;
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                acc.push({ name, link: company.link });
             }
             return acc;
         }, []);
@@ -257,7 +263,11 @@ const runProducer = async (companies, qname, filterJob, logger) => {
         url:         job.baseURL.slice(0, -5) + job.externalPath,
         companyName: job.companyName,
     }));
-    jobUrls.sort(() => 0.5 - Math.random());
+    // Fisher-Yates shuffle for unbiased random distribution
+    for (let i = jobUrls.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [jobUrls[i], jobUrls[j]] = [jobUrls[j], jobUrls[i]];
+    }
 
     await producer(jobUrls, qname);
     logger.info(`Producer finished in ${formatElapsed(startTime)}s — queued ${jobUrls.length} jobs`);

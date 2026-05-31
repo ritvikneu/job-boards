@@ -36,10 +36,6 @@
     "link": "https://rb.wd5.myworkdayjobs.com/wday/cxs/rb/frs/jobs"
   },
   {
-    "name": "symbiotic",
-    "link": "https://symbotic.wd1.myworkdayjobs.com/wday/cxs/symbotic/symbotic/jobs"
-  },
-  {
     "name": "fis",
     "link": "https://fis.wd5.myworkdayjobs.com/wday/cxs/fis/searchjobs/jobs"
   },
@@ -74,10 +70,6 @@
   {
     "name": "lilly",
     "link": "https://lilly.wd5.myworkdayjobs.com/wday/cxs/lilly/lly/jobs"
-  },
-  {
-    "name": "surescripts",
-    "link": "https://surescripts.wd1.myworkdayjobs.com/wday/cxs/surescripts/surescriptscareers/jobs"
   },
   {
     "name": "mtb",
@@ -268,20 +260,8 @@
     "link": "https://ebay.wd5.myworkdayjobs.com/wday/cxs/ebay/apply/jobs"
   },
   {
-    "name": "excellusbcbs",
-    "link": "https://excellusbcbs.wd1.myworkdayjobs.com/wday/cxs/excellusbcbs/excellusbcbscareers/jobs"
-  },
-  {
-    "name": "expedia",
-    "link": "https://expedia.wd5.myworkdayjobs.com/wday/cxs/expedia/search/jobs"
-  },
-  {
     "name": "fedex",
     "link": "https://fedex.wd1.myworkdayjobs.com/wday/cxs/fedex/fxe-eu_external/jobs"
-  },
-  {
-    "name": "fkusa",
-    "link": "https://fkusa.wd1.myworkdayjobs.com/wday/cxs/fkusa/fk_careers/jobs"
   },
   {
     "name": "geico",
@@ -316,10 +296,6 @@
     "link": "https://iqvia.wd1.myworkdayjobs.com/wday/cxs/iqvia/iqvia/jobs"
   },
   {
-    "name": "openlane",
-    "link": "https://kar.wd1.myworkdayjobs.com/wday/cxs/kar/openlane_careers/jobs"
-  },
-  {
     "name": "kohls",
     "link": "https://kohls.wd1.myworkdayjobs.com/wday/cxs/kohls/kohlscareers/jobs"
   },
@@ -348,10 +324,6 @@
     "link": "https://parsons.wd5.myworkdayjobs.com/wday/cxs/parsons/search/jobs"
   },
   {
-    "name": "pcaobus",
-    "link": "https://pcaobus.wd1.myworkdayjobs.com/wday/cxs/pcaobus/pcaob/jobs"
-  },
-  {
     "name": "pwc",
     "link": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/global_experienced_careers/jobs"
   },
@@ -362,10 +334,6 @@
   {
     "name": "rakuten",
     "link": "https://rakuten.wd1.myworkdayjobs.com/wday/cxs/rakuten/rakutenrewards/jobs"
-  },
-  {
-    "name": "redwood",
-    "link": "https://redwood.wd1.myworkdayjobs.com/wday/cxs/redwood/rwcareers/jobs"
   },
   {
     "name": "remitly",
@@ -400,20 +368,12 @@
     "link": "https://thekey.wd1.myworkdayjobs.com/wday/cxs/thekey/thekey/jobs"
   },
   {
-    "name": "vmware",
-    "link": "https://vmware.wd1.myworkdayjobs.com/wday/cxs/vmware/vmware/jobs"
-  },
-  {
     "name": "wfscorp",
     "link": "https://wfscorp.wd5.myworkdayjobs.com/wday/cxs/wfscorp/wfscareers/jobs"
   },
   {
     "name": "workday",
     "link": "https://workday.wd5.myworkdayjobs.com/wday/cxs/workday/workday/jobs"
-  },
-  {
-    "name": "workiva",
-    "link": "https://workiva.wd1.myworkdayjobs.com/wday/cxs/workiva/careers/jobs"
   },
   {
     "name": "zillow",
@@ -426,10 +386,6 @@
   {
     "name": "resilience",
     "link": "https://resilience.wd1.myworkdayjobs.com/wday/cxs/resilience/Resilience_Careers/jobs"
-  },
-  {
-    "name": "therapybrands",
-    "link": "https://therapybrands.wd1.myworkdayjobs.com/wday/cxs/therapybrands/TherapyBrands/jobs"
   },
   {
     "name": "dataminr",
@@ -508,10 +464,6 @@
     "link": "https://cambiumlearning.wd1.myworkdayjobs.com/wday/cxs/cambiumlearning/camb/jobs"
   },
   {
-    "name": "socure",
-    "link": "https://socure.wd1.myworkdayjobs.com/wday/cxs/socure/SocureCareers/jobs"
-  },
-  {
     "name": "cboe",
     "link": "https://cboe.wd1.myworkdayjobs.com/wday/cxs/cboe/External_Career_CBOE/jobs"
   },
@@ -550,6 +502,9 @@
   {
     "name": "Revvity",
     "link": "https://revvity.wd1.myworkdayjobs.com/wday/cxs/revvity/External/jobs"
+  },
+  {
+    "name": "expedia",
+    "link": "https://expedia.wd108.myworkdayjobs.com/wday/cxs/expedia/search/jobs"
   }
 ]
-

@@ -8,6 +8,7 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
+import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -68,6 +69,7 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
                     }
  */
 const loadCompanies = (fileName, logger) => {
+    ensureSafeFileName(fileName);
     const csvFilePath = `app/companies/ashbyhq/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 

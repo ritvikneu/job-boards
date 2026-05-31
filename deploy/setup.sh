@@ -7,7 +7,7 @@ echo "+-------------------------------------------------------------+"
 echo "sudo apt update"
 sudo apt update 
 
-echo "Node and pnpm"
+echo "Node and npm"
 sudo apt install nodejs npm -y
 
 echo "Node and npm version version"
@@ -23,8 +23,6 @@ echo "create a group and user for boarduser"
 sudo groupadd boardsgroup
 echo "create a user boarduser and setup home directory in /opt/boarduser"
 sudo useradd -s /bin/false -g boardsgroup -d /opt/boarduser -m boarduser
-# setup password for boarduser as password
-echo "boarduser:password" | sudo chpasswd
 
 
 echo "+-------------------------------------------------------------+"

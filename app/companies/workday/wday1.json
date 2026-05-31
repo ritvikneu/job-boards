@@ -36,10 +36,6 @@
     "link": "https://rb.wd5.myworkdayjobs.com/wday/cxs/rb/frs/jobs"
   },
   {
-    "name": "symbiotic",
-    "link": "https://symbotic.wd1.myworkdayjobs.com/wday/cxs/symbotic/symbotic/jobs"
-  },
-  {
     "name": "fis",
     "link": "https://fis.wd5.myworkdayjobs.com/wday/cxs/fis/searchjobs/jobs"
   },
@@ -74,10 +70,6 @@
   {
     "name": "lilly",
     "link": "https://lilly.wd5.myworkdayjobs.com/wday/cxs/lilly/lly/jobs"
-  },
-  {
-    "name": "surescripts",
-    "link": "https://surescripts.wd1.myworkdayjobs.com/wday/cxs/surescripts/surescriptscareers/jobs"
   },
   {
     "name": "mtb",
@@ -268,15 +260,11 @@
     "link": "https://collegeboard.wd1.myworkdayjobs.com/wday/cxs/collegeboard/Careers/jobs"
   },
   {
-    "name": "maxar",
-    "link": "https://maxar.wd1.myworkdayjobs.com/wday/cxs/maxar/MAXAR/jobs"
-  },
-  {
     "name": "guardianlife",
     "link": "https://guardianlife.wd5.myworkdayjobs.com/wday/cxs/guardianlife/Guardian-Life-Careers/jobs"
   },
   {
-    "name": "Discover",
+    "name": "discover",
     "link": "https://discover.wd5.myworkdayjobs.com/wday/cxs/discover/Discover/jobs"
   },
   {
@@ -296,7 +284,7 @@
     "link": "https://ilitch.wd5.myworkdayjobs.com/wday/cxs/ilitch/Detroit-Tigers/jobs"
   },
   {
-    "name": "NordStorm",
+    "name": "nordstorm",
     "link": "https://nordstrom.wd5.myworkdayjobs.com/wday/cxs/nordstrom/nordstrom_careers/jobs"
   },
   {

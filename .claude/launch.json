@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "job-boards-api",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/Users/ritvikparamkusham/.nvm/versions/node/v22.22.1/bin/node",
       "runtimeArgs": ["server.js"],
       "port": 7777
     }

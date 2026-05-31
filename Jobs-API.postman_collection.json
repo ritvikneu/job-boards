@@ -76,6 +76,80 @@
 			"response": []
 		},
 		{
+			"name": "Cleanup (all portals)",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:7777/cleanup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"cleanup"
+					]
+				},
+				"description": "Probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday. Reports any slug returning 403 (private) or 404 (stale) to reports/stale-companies-YYYY-MM-DD.csv with a `category` column (`stale` vs `unknown`).\n\nRECOMMENDED: run one portal at a time using the \"Cleanup (subset)\" request below. Running all portals at once tends to trip per-host rate limits on large lists (Greenhouse gh-io has ~2,500 slugs), producing many `unknown` rows. If `per_portal.<name>.unknown > 0` in the response, re-run that portal alone.\n\nNothing is auto-removed — review the report and edit the CSV/JSON manually."
+			},
+			"response": []
+		},
+		{
+			"name": "Cleanup (subset)",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"portals\": [\"greenhouse\", \"lever\"]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:7777/cleanup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"cleanup"
+					]
+				},
+				"description": "Same endpoint, scoped to specific portals. Valid keys: greenhouse, lever, ashby, oracloud, workday."
+			},
+			"response": []
+		},
+		{
 			"name": "Health",
 			"request": {
 				"method": "GET",
