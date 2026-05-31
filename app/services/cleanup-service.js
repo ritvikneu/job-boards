@@ -29,27 +29,23 @@ const PROBE_HEADERS = {
 // (The live scrapers may still hit HTML URLs — that's a separate concern.)
 const PORTALS = {
     greenhouse: {
-        dir:    'greenhouse',
         format: 'csv-slug',
         boards: [
-            { fileName: 'gh-io', baseUrl: 'https://boards-api.greenhouse.io/v1/boards/', urlSuffix: '/jobs' },
+            { fileName: 'greenhouse', baseUrl: 'https://boards-api.greenhouse.io/v1/boards/', urlSuffix: '/jobs' },
         ],
         method: 'GET',
     },
     lever: {
-        dir:    'lever',
         format: 'csv-slug',
         boards: [{ fileName: 'lever', baseUrl: 'https://api.lever.co/v0/postings/' }],
         method: 'GET',
     },
     ashby: {
-        dir:    'ashbyhq',
         format: 'csv-slug',
-        boards: [{ fileName: 'ash', baseUrl: 'https://api.ashbyhq.com/posting-api/job-board/' }],
+        boards: [{ fileName: 'ashby', baseUrl: 'https://api.ashbyhq.com/posting-api/job-board/' }],
         method: 'GET',
     },
     oracloud: {
-        dir:    'oracloud',
         format: 'json-records',
         slugField: 'companyName',
         urlField:  'url',
@@ -57,11 +53,10 @@ const PORTALS = {
         method: 'GET',
     },
     workday: {
-        dir:    'workday',
         format: 'json-records',
         slugField: 'name',
         urlField:  'link',
-        boards: [{ fileName: 'wday' }, { fileName: 'wday1' }, { fileName: 'wday2' }],
+        boards: [{ fileName: 'workday' }],
         method: 'POST',
         body:   { limit: 1, offset: 0, searchText: '' },
     },
@@ -69,7 +64,7 @@ const PORTALS = {
 
 const loadBoard = (portal, cfg, board, logger) => {
     const ext  = cfg.format === 'json-records' ? 'json' : 'csv';
-    const path = `app/companies/${cfg.dir}/${board.fileName}.${ext}`;
+    const path = `app/companies/${board.fileName}.${ext}`;
 
     try {
         const raw = readFileSync(path, 'utf8');

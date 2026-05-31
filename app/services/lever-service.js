@@ -7,7 +7,6 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -42,8 +41,7 @@ const jitteredDelay = () => RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JI
 // ─── Step 1: Load Companies ───────────────────────────────────────────────────
 
 const loadCompanies = (fileName, logger) => {
-    ensureSafeFileName(fileName);
-    const csvFilePath = `app/companies/lever/${fileName}.csv`;
+    const csvFilePath = `app/companies/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 
     try {
@@ -212,7 +210,7 @@ const filterJobs = async (jobs, logger, filterJob) => {
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
 
 export const runLeverScraper = async (filterJob = defaultFilterJob) => {
-    const fileName  = process.env.FILE_LEVER;
+    const fileName  = 'lever';
     const logger    = createCustomLogger(fileName);
     const startTime = Date.now();
 

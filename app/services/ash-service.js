@@ -8,7 +8,6 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -69,8 +68,7 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
                     }
  */
 const loadCompanies = (fileName, logger) => {
-    ensureSafeFileName(fileName);
-    const csvFilePath = `app/companies/ashbyhq/${fileName}.csv`;
+    const csvFilePath = `app/companies/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 
     try {
@@ -341,7 +339,7 @@ const filterJobs = async (jobs, logger, filterJob) => {
  * @returns {object[]} final filtered job array
  */
 export const runAshScraper = async (filterJob = defaultFilterJob) => {
-    const fileName = process.env.FILE_ASH;
+    const fileName = 'ashby';
     const logger = createCustomLogger(fileName);
     const startTime = Date.now();
 

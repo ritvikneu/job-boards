@@ -87,10 +87,18 @@
       "WebFetch(domain:github.com)",
       "Bash(node *)",
       "Bash(grep -cE \"^benevity$|^propel$\" app/companies/ashbyhq/ash.csv)",
-      "Bash(grep -cE \"^\\(benevity|cfa|hebbia|imagentechnologies|mintmobile|neocybernetica|opendoor|propel|ultramobile\\)$\" app/companies/greenhouse/gh-io.csv)"
+      "Bash(grep -cE \"^\\(benevity|cfa|hebbia|imagentechnologies|mintmobile|neocybernetica|opendoor|propel|ultramobile\\)$\" app/companies/greenhouse/gh-io.csv)",
+      "Bash(cp /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse/gh-io.csv /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse.csv)",
+      "Bash(cp /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/lever/lever.csv /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/lever.csv)",
+      "Bash(cp /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/ashbyhq/ash.csv /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/ashby.csv)",
+      "Bash(cp /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/oracloud/oracloud.json /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/oracloud.json)",
+      "Bash(rm -rf /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/lever /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/ashbyhq /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/oracloud /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/workday && ls /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/)",
+      "Bash(git add *)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
-      "/private/tmp"
+      "/private/tmp",
+      "/Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse"
     ]
   },
   "hooks": {

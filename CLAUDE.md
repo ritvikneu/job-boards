@@ -65,9 +65,6 @@ STATES=                  # comma-separated state names
 STATES_ABBR=             # comma-separated state abbreviations
 POSTING_DIFF=10          # max days since posting
 RABBITMQ_URL=amqp://localhost  # required for /workday only
-FILE_GH=gh-io            # CSV filename stem for Greenhouse
-FILE_LEVER=lever         # CSV filename stem for Lever
-FILE_ASH=ash             # CSV filename stem for Ashby
 HEALTH_CHECK=OK          # returned by /health
 ```
 
@@ -120,7 +117,6 @@ git diff app/companies/
 - `DICE_API_KEY` is hardcoded in `dice-service.js:19` — should move to `.env`
 - Individual scrapers still import `axios` directly instead of using the shared `http-client.js` instance
 - No graceful degradation if RabbitMQ is down for `/workday`
-- Oracle Cloud service should read `FILE_ORA` from env instead of hardcoding `'oracloud'`
 
 
 # plugins

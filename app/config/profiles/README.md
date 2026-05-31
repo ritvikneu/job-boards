@@ -87,8 +87,8 @@ Any key omitted from a profile falls back to the value in `.env`.
 ### Workday (`GET /workday`)
 
 ```json
-// file_name selects which company CSV to scrape (maps to app/companies/workday/<name>.json)
-{ "file_name": "wday1", "profile": "swe-us" }
+// file_name overrides the default workday.json (maps to app/companies/<name>.json)
+{ "file_name": "workday", "profile": "swe-us" }
 
 // Different company file + tighter date window
 { "file_name": "wday2", "profile": "new-grad", "filters": { "posting_diff": 3 } }

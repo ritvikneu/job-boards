@@ -7,7 +7,6 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { ensureSafeFileName } from './_filename-guard.js';
 import { getJobByJobId, upsertJob } from '../database/sqlite-service.js';
 import { producer, getNextMessages, closeConnection } from './rabbitMQ-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
@@ -80,8 +79,7 @@ const parsePostedOn = (postedOn) => {
  * @returns {{ name: string, link: string }[]}
  */
 const loadCompanies = (fileName, logger) => {
-    ensureSafeFileName(fileName);
-    const filePath = `app/companies/workday/${fileName}.json`;
+    const filePath = `app/companies/${fileName}.json`;
     logger.info(`Loading companies from: ${filePath}`);
 
     try {
@@ -497,7 +495,7 @@ const filterJobs = (jobs, logger, filterJob) => {
  * @returns {object[]} final filtered job array
  */
 export const runWorkdayScraper = async (file_name, filterJob = defaultFilterJob) => {
-    const fileName  = file_name || process.env.FILE_WDAY;
+    const fileName  = file_name || 'workday';
     const logger    = createCustomLogger(fileName);
     const startTime = Date.now();
 

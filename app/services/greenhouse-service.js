@@ -7,7 +7,6 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -43,8 +42,7 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
  * Lines starting with '#' are treated as comments and skipped.
  */
 export const loadCompanies = (fileName, logger) => {
-    ensureSafeFileName(fileName);
-    const csvFilePath = `app/companies/greenhouse/${fileName}.csv`;
+    const csvFilePath = `app/companies/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 
     try {
@@ -209,11 +207,11 @@ const filterJobs = async (jobs, logger, filterJob, portal) => {
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
 
 /**
- * Entry point for the Greenhouse scraper. Reads slugs from FILE_GH and hits
+ * Entry point for the Greenhouse scraper. Reads slugs from app/companies/greenhouse.csv and hits
  * the official JSON API for each board.
  */
 export const runGreenhouseScraper = async (filterJob = defaultFilterJob) => {
-    const fileName = process.env.FILE_GH;
+    const fileName = 'greenhouse';
     const portal   = 'greenhouse';
 
     const logger    = createCustomLogger(fileName);
