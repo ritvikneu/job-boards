@@ -15,6 +15,19 @@ let channel;
 let channelReady;
 const channelReadyPromise = new Promise((resolve) => { channelReady = resolve; });
 
+// Exponential backoff: cap at 60s. Reset on every successful connect so a
+// long-running broker hiccup doesn't permanently stretch reconnect cadence.
+const BACKOFF_BASE_MS = 5000;
+const BACKOFF_CAP_MS  = 60000;
+let reconnectAttempts = 0;
+const nextBackoffMs = () => Math.min(BACKOFF_BASE_MS * (2 ** reconnectAttempts), BACKOFF_CAP_MS);
+const scheduleReconnect = (reason) => {
+    const wait = nextBackoffMs();
+    reconnectAttempts++;
+    logger.warn(`RabbitMQ reconnect scheduled in ${wait / 1000}s (attempt ${reconnectAttempts}) — ${reason}`);
+    setTimeout(setupRabbitMQ, wait);
+};
+
 async function setupRabbitMQ() {
     try {
         const url = process.env.RABBITMQ_URL || 'amqp://localhost';
@@ -25,20 +38,20 @@ async function setupRabbitMQ() {
 
         channel.on('error', (err) => {
             logger.error(`RabbitMQ channel error: ${err.message}`);
-            setTimeout(setupRabbitMQ, 5000);
+            scheduleReconnect(`channel error: ${err.message}`);
         });
 
         channel.on('close', () => {
-            logger.warn('RabbitMQ channel closed — reconnecting in 5s');
+            logger.warn('RabbitMQ channel closed');
             channel = null;
-            setTimeout(setupRabbitMQ, 5000);
+            scheduleReconnect('channel closed');
         });
 
+        reconnectAttempts = 0;
         logger.info('RabbitMQ connection established');
         channelReady();
     } catch (error) {
-        logger.error(`RabbitMQ setup failed: ${error.message} — retrying in 5s`);
-        setTimeout(setupRabbitMQ, 5000);
+        scheduleReconnect(`setup failed: ${error.message || 'unknown error'}`);
     }
 }
 

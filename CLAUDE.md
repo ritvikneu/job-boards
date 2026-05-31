@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-pnpm install          # install dependencies
-pnpm start            # node server.js — starts on port 7777
-pnpm test             # mocha --exit tests/test.js
+npm install          # install dependencies
+npm start            # node server.js — starts on port 7777
+npm test             # mocha --exit tests/test.js
 ```
 
 Test a scraper:
@@ -73,13 +73,47 @@ HEALTH_CHECK=OK          # returned by /health
 
 See `.env.example` for the full list.
 
-### Cleanup endpoint
+### Cleanup, re-homing, and CSV maintenance
 
-`POST /cleanup` probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday to find slugs returning 403 (private) or 404 (stale). Output goes to `reports/stale-companies-YYYY-MM-DD.csv` with a `category` column: `stale` (definite — safe to remove) or `unknown` (probe was rate-limited or errored — inconclusive).
+Three tools keep the per-portal company lists healthy. None of them auto-mutates source files unless explicitly run with `--apply`.
 
-**Run one portal at a time** for accurate results — running all portals at once tends to trip per-host rate limits on large lists (Greenhouse gh-io has ~2,500 slugs) and produces many `unknown` rows. If `per_portal.<name>.unknown > 0` in the response, re-run that portal alone: `POST /cleanup` with `{"portals":["greenhouse"]}`.
+**`POST /cleanup`** ([app/services/cleanup-service.js](app/services/cleanup-service.js)) — probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday using each portal's **official JSON API** (e.g. `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`). HTML URLs are unreliable (Greenhouse 406s every GET, Ashby SPA returns 200 for any slug, Lever HTML 404s live boards), so we always go through the APIs. Output: `reports/stale-companies-YYYY-MM-DD.csv` with a `category` column — `stale` (404/403, safe to remove) or `unknown` (5xx/timeout/network error). With the API endpoints, `unknown` should be near zero; if it's not, re-run that portal alone. Optional body: `{"portals":["greenhouse","lever"]}` to scope.
 
-Nothing is auto-removed; review the report and edit `app/companies/<portal>/*.csv` or `*.json` manually.
+**`scripts/find-portal.js`** — for each slug in a stale report (or a plain text file), probes Greenhouse + Ashby + Lever via their JSON APIs to see if the company has moved. Skips the slug's original portal. Output: `reports/portal-discovery-YYYY-MM-DD.csv` mapping `slug → found_in` (or `none`).
+
+```bash
+node scripts/find-portal.js                          # uses today's stale-companies report
+node scripts/find-portal.js --report path/to.csv     # specific report
+node scripts/find-portal.js --from-file slugs.txt    # bare slug list, one per line
+```
+
+**`scripts/apply-cleanup.js`** — mutates `app/companies/<portal>/*.csv` and `*.json`: removes confirmed-stale slugs and (optionally) appends re-homed slugs to the target portal's CSV. Dry-run by default; `--apply` writes. Git is the audit trail — review `git diff app/companies/` before committing.
+
+```bash
+node scripts/apply-cleanup.js                                          # dry-run
+node scripts/apply-cleanup.js --apply                                  # remove stale
+node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-YYYY-MM-DD.csv
+```
+
+**End-to-end workflow:**
+
+```bash
+# 1. Identify stale (per-portal for clean reports)
+for p in greenhouse lever ashby; do
+  curl -sX POST http://localhost:7777/cleanup -H "Content-Type: application/json" -d "{\"portals\":[\"$p\"]}"
+  mv reports/stale-companies-*.csv reports/stale-$p-$(date +%F).csv
+done
+# (optional) consolidate the per-portal reports into one stale-companies-<date>.csv
+
+# 2. Discover where stale slugs live now
+node scripts/find-portal.js
+
+# 3. Apply both removals and re-home additions
+node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-$(date +%F).csv
+
+# 4. Review and commit
+git diff app/companies/
+```
 
 ## Known Issues
 

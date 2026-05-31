@@ -29,8 +29,7 @@ const buildFilterJob = (body) => new FilterJobs(resolveFilterConfig(body));
 export const getGreenhouse = async (request, response, next) => {
     try {
         const filterJob = buildFilterJob(request.body);
-        const embed = request.body.embed || false;
-        const res = await ghService.runGreenhouseScraper(embed, filterJob);
+        const res = await ghService.runGreenhouseScraper(filterJob);
         response.json({ message: res });
     } catch (err) {
         logger.error(`getGreenhouse failed: ${err.message}`);

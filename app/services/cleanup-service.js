@@ -8,7 +8,12 @@ const CONCURRENCY_LIMIT  = 50;
 const REQUEST_TIMEOUT_MS = 15000;
 const REPORT_DIR         = 'reports';
 const STALE_STATUSES     = new Set([403, 404]);
-const CATEGORY_ORDER     = { stale: 0, unknown: 1 };
+// Transient errors are inconclusive but expected (rate limit / network blip);
+// hard errors (5xx, parse failures, unknown statuses) likely indicate a real
+// upstream problem and deserve investigation rather than silent retry.
+const TRANSIENT_STATUSES = new Set([408, 429, 502, 503, 504]);
+const TRANSIENT_ERR_CODES = new Set(['ECONNABORTED', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN']);
+const CATEGORY_ORDER     = { stale: 0, unknown_transient: 1, unknown_error: 2 };
 
 // Probe headers. We prefer each portal's public JSON API over its HTML page:
 //   - Greenhouse HTML 406s every non-browser GET.
@@ -27,8 +32,7 @@ const PORTALS = {
         dir:    'greenhouse',
         format: 'csv-slug',
         boards: [
-            { fileName: 'gh-io',    baseUrl: 'https://boards-api.greenhouse.io/v1/boards/', urlSuffix: '/jobs' },
-            { fileName: 'gh-embed', baseUrl: 'https://boards-api.greenhouse.io/v1/boards/', urlSuffix: '/jobs' },
+            { fileName: 'gh-io', baseUrl: 'https://boards-api.greenhouse.io/v1/boards/', urlSuffix: '/jobs' },
         ],
         method: 'GET',
     },
@@ -91,10 +95,11 @@ const loadBoard = (portal, cfg, board, logger) => {
     }
 };
 
-// Three outcomes:
-//   null                       → confirmed OK (2xx/3xx)
-//   { category: 'stale',   ... } → confirmed dead (403/404)
-//   { category: 'unknown', ... } → couldn't determine (429, 5xx, network err)
+// Four outcomes:
+//   null                                  → confirmed OK (2xx/3xx)
+//   { category: 'stale',             ... } → confirmed dead (403/404)
+//   { category: 'unknown_transient', ... } → retry-worthy (429/5xx/timeout)
+//   { category: 'unknown_error',     ... } → investigate (parse fail / unexpected)
 const probe = async (portal, cfg, entry) => {
     try {
         if (cfg.method === 'POST') {
@@ -105,16 +110,18 @@ const probe = async (portal, cfg, entry) => {
         return null;
     } catch (err) {
         const status = err.response?.status;
+        const code   = err.code;
         const base   = { portal, slug: entry.slug, board_url: entry.url };
 
         if (STALE_STATUSES.has(status)) {
             return { ...base, category: 'stale', status, reason: '' };
         }
+        const isTransient = TRANSIENT_STATUSES.has(status) || TRANSIENT_ERR_CODES.has(code);
         return {
             ...base,
-            category: 'unknown',
-            status:   status ?? 'error',
-            reason:   err.code || err.message || 'request failed',
+            category: isTransient ? 'unknown_transient' : 'unknown_error',
+            status:   status ?? code ?? 'error',
+            reason:   code || err.message || 'request failed',
         };
     }
 };
@@ -198,20 +205,26 @@ export const runCleanup = async ({ portals } = {}) => {
             entries.map((e) => limit(() => probe(portal, cfg, e)))
         );
 
-        const portalStale   = results.filter((r) => r?.category === 'stale');
-        const portalUnknown = results.filter((r) => r?.category === 'unknown');
+        const portalStale     = results.filter((r) => r?.category === 'stale');
+        const portalTransient = results.filter((r) => r?.category === 'unknown_transient');
+        const portalErrors    = results.filter((r) => r?.category === 'unknown_error');
+        const portalUnknown   = [...portalTransient, ...portalErrors];
 
         stale.push(...portalStale);
         unknown.push(...portalUnknown);
         per_portal[portal] = {
-            checked: entries.length,
-            stale:   portalStale.length,
-            unknown: portalUnknown.length,
+            checked:           entries.length,
+            stale:             portalStale.length,
+            unknown_transient: portalTransient.length,
+            unknown_error:     portalErrors.length,
         };
 
-        logger.info(`[${portal}] ${entries.length} probed, ${portalStale.length} stale, ${portalUnknown.length} unknown`);
-        if (portalUnknown.length > 0) {
-            logger.warn(`[${portal}] ${portalUnknown.length} probes inconclusive (likely rate-limited) — re-run this portal alone for a clean read: POST /cleanup {"portals":["${portal}"]}`);
+        logger.info(`[${portal}] ${entries.length} probed, ${portalStale.length} stale, ${portalTransient.length} unknown_transient, ${portalErrors.length} unknown_error`);
+        if (portalTransient.length > 0) {
+            logger.warn(`[${portal}] ${portalTransient.length} probes inconclusive (likely rate-limited) — re-run this portal alone for a clean read: POST /cleanup {"portals":["${portal}"]}`);
+        }
+        if (portalErrors.length > 0) {
+            logger.error(`[${portal}] ${portalErrors.length} probes hit hard errors — investigate the report for non-transient failures`);
         }
     }
 

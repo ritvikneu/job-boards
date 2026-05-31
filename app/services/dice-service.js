@@ -1,4 +1,5 @@
 import axios from 'axios';
+// jsdom is required: the human-facing Position ID (recruiter reference code) is not exposed by the Dice JSON search API — it only appears in the detail-page HTML at aside.legalInfo li[data-testid="legalInfo-referenceCode"]. The listing's `id`/`jobId` are internal UUIDs, not the Position Id.
 import jsdom from 'jsdom';
 const { JSDOM } = jsdom;
 import pLimit from 'p-limit';

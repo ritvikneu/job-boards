@@ -58,11 +58,8 @@ Any key omitted from a profile falls back to the value in `.env`.
 ### Greenhouse (`GET /greenhouse`)
 
 ```json
-// Standard board
+// Named profile
 { "profile": "swe-us" }
-
-// Embed board (Greenhouse has two board types)
-{ "embed": true, "profile": "swe-us" }
 
 // Inline override — tighten to 3-day window
 { "profile": "swe-us", "filters": { "posting_diff": 3 } }

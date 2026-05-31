@@ -3,11 +3,19 @@ config();
 
 // ─── Module-level env var cache ───────────────────────────────────────────────
 // Parse environment variables once at module load instead of on every request.
+// NOTE: these are frozen for the life of the process. Editing .env on a running
+// server has no effect until the process is restarted.
 const ENV_JOB_TITLES    = process.env.JOB_TITLES    ? process.env.JOB_TITLES.split(",").map(t => t.trim().toLowerCase())    : [];
 const ENV_IGNORE_TITLES = process.env.IGNORE_TITLES ? process.env.IGNORE_TITLES.split(",").map(t => t.trim().toLowerCase()) : [];
-const ENV_COUNTRIES     = process.env.COUNTRIES     ? process.env.COUNTRIES.split(",").map(l => l.trim().toLowerCase())     : [];
-const ENV_STATES        = process.env.STATES        ? process.env.STATES.split(",").map(l => l.trim().toLowerCase())        : [];
-const ENV_STATES_ABBR   = process.env.STATES_ABBR   ? process.env.STATES_ABBR.split(",").map(l => l.trim().toLowerCase())   : [];
+
+// 'remote' is a work-mode, not a US locator — must never match as a country/state.
+// Stripped here so a stray entry in .env can't reintroduce the non-US-remote leak.
+const REMOTE_TOKENS = new Set(['remote', 'remote work', 'fully remote']);
+const parseLocations = (raw) => raw ? raw.split(",").map(l => l.trim().toLowerCase()).filter(l => l && !REMOTE_TOKENS.has(l)) : [];
+
+const ENV_COUNTRIES     = parseLocations(process.env.COUNTRIES);
+const ENV_STATES        = parseLocations(process.env.STATES);
+const ENV_STATES_ABBR   = parseLocations(process.env.STATES_ABBR);
 
 // ─── Module-level regex cache ─────────────────────────────────────────────────
 // Compiled regexes are stored here and reused across all class instances.

@@ -108,7 +108,7 @@
 						"cleanup"
 					]
 				},
-				"description": "Probes every company across Greenhouse (gh-io + gh-embed), Lever, Ashby, Oracle Cloud, and Workday. Reports any slug returning 403 (private) or 404 (stale) to reports/stale-companies-YYYY-MM-DD.csv with a `category` column (`stale` vs `unknown`).\n\nRECOMMENDED: run one portal at a time using the \"Cleanup (subset)\" request below. Running all portals at once tends to trip per-host rate limits on large lists (Greenhouse gh-io has ~2,500 slugs), producing many `unknown` rows. If `per_portal.<name>.unknown > 0` in the response, re-run that portal alone.\n\nNothing is auto-removed — review the report and edit the CSV/JSON manually."
+				"description": "Probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday. Reports any slug returning 403 (private) or 404 (stale) to reports/stale-companies-YYYY-MM-DD.csv with a `category` column (`stale` vs `unknown`).\n\nRECOMMENDED: run one portal at a time using the \"Cleanup (subset)\" request below. Running all portals at once tends to trip per-host rate limits on large lists (Greenhouse gh-io has ~2,500 slugs), producing many `unknown` rows. If `per_portal.<name>.unknown > 0` in the response, re-run that portal alone.\n\nNothing is auto-removed — review the report and edit the CSV/JSON manually."
 			},
 			"response": []
 		},

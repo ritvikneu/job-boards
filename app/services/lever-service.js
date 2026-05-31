@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import axios from 'axios';
-import jsdom from 'jsdom';
 import pLimit from 'p-limit';
 import { config } from 'dotenv';
 
@@ -8,38 +7,42 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { getJob, updateJobDate, upsertJob } from '../database/sqlite-service.js';
+import { ensureSafeFileName } from './_filename-guard.js';
+import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
-const fileHandler = new FileHandler();
+const fileHandler      = new FileHandler();
 const defaultFilterJob = new FilterJobs();
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LEVER_BASE_URL    = 'https://jobs.lever.co/';
-const CONCURRENCY_LIMIT = 50;    // max parallel requests for both listing pages and date fetches
+// Lever's official JSON API. Returns every posting for a board in a single
+// call with `createdAt` inline — eliminates the per-job HTML date fetch that
+// dominated runtime in the old HTML scraper.
+const LEVER_API_BASE_URL = 'https://api.lever.co/v0/postings/';
+
+// 30 (vs 50 for Greenhouse) — Lever boards are more prone to slow responses
+// per company; smaller concurrency reduces the chance a stuck host blocks the
+// pool for the duration of the slowest tenant.
+const CONCURRENCY_LIMIT  = 30;
 const REQUEST_TIMEOUT_MS = 15000;
-const RETRY_DELAY_MS    = 10000; // wait 10s before retrying a failed/rate-limited request
-const MAX_RETRIES       = 2;
+const RETRY_DELAY_MS     = 10000;
+// Jitter prevents the second retry wave from hitting api.lever.co in lockstep
+// when a transient blip rejects many companies at once.
+const RETRY_JITTER_MS    = 5000;
+const MAX_RETRIES        = 2;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
+const delay         = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
+const jitteredDelay = () => RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JITTER_MS);
 
 // ─── Step 1: Load Companies ───────────────────────────────────────────────────
 
-/**
- * Reads the Lever company slugs CSV, deduplicates entries, and returns an array
- * of { name, link } objects ready for scraping.
- *
- * The CSV has one slug per line (e.g. "stripe", "openai").
- * Lines starting with '#' are treated as comments and skipped.
- * Slugs are lowercased and trimmed; duplicates are silently dropped.
- */
 const loadCompanies = (fileName, logger) => {
+    ensureSafeFileName(fileName);
     const csvFilePath = `app/companies/lever/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 
@@ -51,7 +54,7 @@ const loadCompanies = (fileName, logger) => {
 
         const companies = [...new Set(rows)].map((name) => ({
             name,
-            link: `${LEVER_BASE_URL}${name}`,
+            link: `${LEVER_API_BASE_URL}${name}`,
         }));
 
         logger.info(`Companies loaded: ${companies.length}`);
@@ -62,87 +65,64 @@ const loadCompanies = (fileName, logger) => {
     }
 };
 
-// ─── Step 2: Scrape Listing Pages ─────────────────────────────────────────────
+// ─── Step 2: Scrape Postings ──────────────────────────────────────────────────
 
 /**
- * Parses the HTML of a Lever company job board listing page and extracts all
- * visible job postings.
+ * Maps Lever API postings to our internal job schema.
  *
- * Lever renders each posting as a <div class="posting"> containing:
- *   - .posting-title[href]   → absolute job URL
- *   - .posting-title h5      → job title text
- *   - .sort-by-location      → location text
- *
- * Postings without a valid href or title are skipped defensively to avoid
- * null reference errors on non-standard page layouts.
- *
- * @param {string} html        - raw HTML from the Lever listing page
- * @param {object} company     - { name, link }
- * @returns {object[]}         - array of job objects (no posting_date yet)
+ * `createdAt` is the posting's creation timestamp in epoch ms. Lever does not
+ * expose an `updatedAt` field on the public API, so resurfacing is not
+ * detectable — same behavior as the old HTML scraper's `datePosted`.
  */
-const parseJobsFromListingHtml = (html, company) => {
-    const dom = new jsdom.JSDOM(html);
-    const document = dom.window.document;
-    const postingEls = document.querySelectorAll('.posting');
-
-    const jobs = [];
-
-    for (const el of postingEls) {
-        const titleEl    = el.querySelector('.posting-title');
-        const locationEl = el.querySelector('.sort-by-location');
-
-        // Guard against non-standard layouts that may omit expected elements
-        if (!titleEl || !titleEl.getAttribute('href')) continue;
-
-        const job_link = titleEl.getAttribute('href');
-        const titleH5  = titleEl.querySelector('h5');
-        if (!titleH5) continue;
-
-        jobs.push({
-            job_id:       job_link.split('/')[4] ?? '',
-            job_title:    titleH5.textContent.trim(),
-            job_link,
-            location:     locationEl?.textContent.trim() ?? '',
+const mapApiPostings = (postings, company) =>
+    postings
+        .filter((p) => p?.hostedUrl)
+        .map((p) => ({
+            job_id:       String(p.id ?? ''),
+            job_title:    p.text ?? '',
+            posting_date: p.createdAt
+                ? new Date(p.createdAt).toISOString().split('T')[0]
+                : null,
+            location:     p.categories?.location ?? '',
             company_name: company.name,
-        });
-    }
-
-    return jobs;
-};
+            job_link:     p.hostedUrl,
+        }));
 
 /**
- * Fetches a single company's Lever job board listing page and returns all
- * job postings found on it. Retries on transient failures up to MAX_RETRIES.
+ * Fetches a single company's Lever board via the JSON API. Single GET, all
+ * postings returned inline with their creation dates — no per-job follow-up
+ * fetches.
  *
- * 404 responses are expected for companies that have migrated away from Lever
- * or whose slug is stale — these are logged as warnings, not errors.
- *
- * @param {object} company     - { name, link }
- * @param {number} retriesLeft - decremented on each retry attempt
- * @param {Logger} logger
- * @returns {object[]}         - parsed job objects, or [] on any failure
+ * 404 → warn (stale slug). 429/other → retry up to MAX_RETRIES.
  */
 const fetchJobsForCompany = async (company, retriesLeft, logger) => {
     try {
         const response = await axios.get(company.link, { timeout: REQUEST_TIMEOUT_MS });
-
-        const jobs = parseJobsFromListingHtml(response.data, company);
-        logger.debug(`${company.name}: ${jobs.length} postings found on listing page`);
+        const jobs     = mapApiPostings(response.data ?? [], company);
+        logger.debug(`${company.name}: ${jobs.length} postings found`);
         return jobs;
 
     } catch (err) {
         const status = err.response?.status;
+        const code   = err.code;
 
-        // 404 = company not on Lever or slug is stale — warn, do not retry
         if (status === 404) {
             logger.warn(`Company not found on Lever (404) — slug may be stale: ${company.name}`);
             return [];
         }
 
         if (retriesLeft > 0) {
-            const reason = status === 429 ? 'rate limited (429)' : err.message;
-            logger.warn(`Retrying ${company.name} (${retriesLeft} left) — ${reason}`);
-            await delay(RETRY_DELAY_MS);
+            // Classify the cause so logs make the retry distribution legible.
+            let reason;
+            if (status === 429)                                          reason = 'rate limited (429)';
+            else if (status >= 500)                                      reason = `upstream ${status}`;
+            else if (code === 'ECONNABORTED' || code === 'ETIMEDOUT')    reason = `timeout (${REQUEST_TIMEOUT_MS}ms)`;
+            else if (code === 'ECONNRESET')                              reason = 'connection reset';
+            else                                                         reason = err.message;
+
+            const wait = jitteredDelay();
+            logger.warn(`Retrying ${company.name} in ${wait}ms (${retriesLeft} left) — ${reason}`);
+            await delay(wait);
             return fetchJobsForCompany(company, retriesLeft - 1, logger);
         }
 
@@ -152,14 +132,6 @@ const fetchJobsForCompany = async (company, retriesLeft, logger) => {
     }
 };
 
-/**
- * Fans out listing page scraping across all companies concurrently.
- * pLimit caps simultaneous requests to avoid overwhelming Lever's servers.
- *
- * @param {object[]} companies
- * @param {Logger}   logger
- * @returns {object[]} flat array of all jobs from all companies (no dates yet)
- */
 const scrapeAllCompanies = async (companies, logger) => {
     const startTime = Date.now();
     logger.info(`Starting concurrent scrape for ${companies.length} companies (limit: ${CONCURRENCY_LIMIT})`);
@@ -169,7 +141,7 @@ const scrapeAllCompanies = async (companies, logger) => {
         companies.map((company) => limit(() => fetchJobsForCompany(company, MAX_RETRIES, logger)))
     );
 
-    const allJobs = results.flat();
+    const allJobs           = results.flat();
     const companiesWithJobs = results.filter((r) => r.length > 0).length;
 
     logger.info(
@@ -183,117 +155,32 @@ const scrapeAllCompanies = async (companies, logger) => {
 // ─── Step 3: Filter Jobs ──────────────────────────────────────────────────────
 
 /**
- * Fetches the posting date for a single job by scraping the individual job
- * page's structured data script tag.
- *
- * Lever embeds a <script type="application/ld+json"> block on every job page
- * that follows the schema.org JobPosting spec and includes a "datePosted" field.
- *
- * This fetch only happens for jobs that have already passed the location, title,
- * and SQLite dedup checks — minimising the number of individual page requests.
- *
- * Returns null if the page is unreachable or the date field is absent.
- *
- * @param {string} job_link - full URL to the individual Lever job page
- * @returns {string|null}   - ISO date string ("YYYY-MM-DD") or null
- */
-const fetchPostingDate = async (job_link) => {
-    try {
-        const response = await axios.get(job_link, { timeout: REQUEST_TIMEOUT_MS });
-        const dom      = new jsdom.JSDOM(response.data);
-        const scriptEl = dom.window.document.querySelector('script[type="application/ld+json"]');
-
-        if (!scriptEl) return null;
-
-        const parsed = JSON.parse(scriptEl.textContent);
-        return parsed.datePosted ?? null;
-    } catch {
-        return null;
-    }
-};
-
-/**
- * Runs a single job through the full filter pipeline, with two execution paths:
- *
- * FAST PATH (job already in SQLite from a previous run):
- *   - Use cached title, location, and posting_date — no HTTP calls needed.
- *   - If posting_date was NULL (job was stored after failing title/location on a
- *     prior run with stricter filters), fetch it now and cache it for next time.
- *   - Apply all three filters against cached data and return.
- *
- * SLOW PATH (new job, not yet in SQLite):
- *   - Apply location and title filters in-memory (cheapest checks first).
- *   - Store the job in SQLite regardless of filter outcome so future runs can
- *     use the fast path. posting_date is stored if fetched, or NULL if the job
- *     was rejected before we needed to fetch it.
- *   - Fetch posting_date only if location + title both pass (avoids HTTP calls
- *     for jobs that would be rejected on cheaper checks anyway).
- *   - Apply date filter and return.
- *
- * This design means each job URL is fetched from Lever at most once ever.
- * On the first run, all jobs go through the slow path. On subsequent runs,
- * every job seen before hits the fast path with zero HTTP calls.
- *
- * @param {object}     job       - scraped job without posting_date
- * @param {Logger}     logger
- * @param {FilterJobs} filterJob
- * @returns {object|null} job enriched with posting_date, or null if filtered out
+ * Standard fast/slow filter pipeline. Since the API returns posting_date
+ * inline, there is no date-backfill path — the slow path just upserts and
+ * applies filters in order.
  */
 const applyJobFilters = async (job, logger, filterJob) => {
     if (!job?.job_link) return null;
 
     try {
-        // ── Fast path: job was seen on a previous run ──────────────────────────
         const cached = getJob(job.job_link);
 
         if (cached) {
-            // Re-filter using cached data — no HTTP calls
-            if (!filterJob.matchesLocation(cached.location))  return null;
-            if (!filterJob.matchesTitle(cached.job_title))    return null;
-
-            let { posting_date } = cached;
-
-            if (!posting_date) {
-                // Job was stored without a date (failed cheaper filters last time).
-                // Now that it passes location + title, fetch the date and cache it.
-                posting_date = await fetchPostingDate(job.job_link);
-                if (posting_date) updateJobDate(job.job_link, posting_date);
-            }
-
-            if (!posting_date)                               return null;
-            if (!filterJob.matchesPostingDate(posting_date)) return null;
-
-            return { ...cached, posting_date };
+            if (!filterJob.matchesLocation(cached.location))         return null;
+            if (!filterJob.matchesTitle(cached.job_title))           return null;
+            if (!cached.posting_date)                                return null;
+            if (!filterJob.matchesPostingDate(cached.posting_date))  return null;
+            return cached;
         }
 
-        // ── Slow path: new job not yet in the database ──────────────────────────
+        upsertJob(job, 'lever');
 
-        // Step 1 — location filter (no I/O). Store and exit if rejected.
-        if (!filterJob.matchesLocation(job.location)) {
-            upsertJob({ ...job, posting_date: null }, 'lever');
-            return null;
-        }
+        if (!filterJob.matchesLocation(job.location))        return null;
+        if (!filterJob.matchesTitle(job.job_title))          return null;
+        if (!job.posting_date)                               return null;
+        if (!filterJob.matchesPostingDate(job.posting_date)) return null;
 
-        // Step 2 — title filter (no I/O). Store and exit if rejected.
-        if (!filterJob.matchesTitle(job.job_title)) {
-            upsertJob({ ...job, posting_date: null }, 'lever');
-            return null;
-        }
-
-        // Step 3 — fetch posting date from the individual job page's LD+JSON.
-        // Happens only after location + title pass to minimise HTTP calls.
-        const posting_date = await fetchPostingDate(job.job_link);
-
-        // Store to SQLite now (with date if we got one, NULL otherwise) so this
-        // job is handled by the fast path on every subsequent run.
-        upsertJob({ ...job, posting_date: posting_date ?? null }, 'lever');
-
-        if (!posting_date)                               return null;
-
-        // Step 4 — date filter
-        if (!filterJob.matchesPostingDate(posting_date)) return null;
-
-        return { ...job, posting_date };
+        return job;
 
     } catch (error) {
         logger.error(`Filter error for job [${job.job_link}]: ${error.message}`);
@@ -301,24 +188,14 @@ const applyJobFilters = async (job, logger, filterJob) => {
     }
 };
 
-/**
- * Applies the full filter pipeline to all scraped jobs concurrently,
- * then sorts survivors by posting date descending (newest first).
- *
- * pLimit keeps individual job page fetches (inside applyJobFilters) bounded
- * so we don't flood Lever with hundreds of simultaneous requests.
- *
- * @param {object[]}   jobs
- * @param {Logger}     logger
- * @param {FilterJobs} filterJob
- * @returns {object[]} filtered and sorted jobs with posting_date populated
- */
 const filterJobs = async (jobs, logger, filterJob) => {
     const startTime = Date.now();
     logger.info(`Filtering ${jobs.length} jobs by location, title, and date rules`);
 
     const limit   = pLimit(CONCURRENCY_LIMIT);
-    const results = await Promise.all(jobs.map((job) => limit(() => applyJobFilters(job, logger, filterJob))));
+    const results = await Promise.all(
+        jobs.map((job) => limit(() => applyJobFilters(job, logger, filterJob)))
+    );
 
     const validJobs = results
         .filter(Boolean)
@@ -334,30 +211,6 @@ const filterJobs = async (jobs, logger, filterJob) => {
 
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
 
-/**
- * Entry point for the Lever scraper pipeline.
- *
- * Orchestrates three stages in sequence:
- *   1. Load company slugs from CSV
- *   2. Scrape each company's Lever job board listing page (concurrently)
- *   3. Filter by location, title, date (with per-job date fetch via LD+JSON)
- *   4. Write passing jobs to the Excel output file
- *
- * Key design notes:
- *   - SQLite writes happen inside applyJobFilters (not here) so ALL scraped
- *     jobs are persisted — not just the filtered ones. This means subsequent
- *     runs skip the expensive individual job page HTTP fetch entirely for any
- *     job seen before (the "fast path" in applyJobFilters).
- *   - Listing page scraping and individual job date fetches both run at
- *     CONCURRENCY_LIMIT (50) — 10× higher than the previous limit of 5.
- *   - Date fetches only happen for jobs passing location + title, so we
- *     minimise HTTP calls even on first-run slow-path jobs.
- *   - All output goes through the structured logger — no console.log.
- *   - StatsD metrics are emitted so dashboards show volume and yield per run.
- *
- * @param {FilterJobs} filterJob - per-request config; defaults to env-based singleton
- * @returns {object[]} final filtered job array
- */
 export const runLeverScraper = async (filterJob = defaultFilterJob) => {
     const fileName  = process.env.FILE_LEVER;
     const logger    = createCustomLogger(fileName);
@@ -366,12 +219,9 @@ export const runLeverScraper = async (filterJob = defaultFilterJob) => {
     logger.info(`=== Lever Job Scraper Started | ${new Date().toISOString()} ===`);
 
     try {
-        const companies = loadCompanies(fileName, logger);
-
+        const companies   = loadCompanies(fileName, logger);
         const scrapedJobs = await scrapeAllCompanies(companies, logger);
 
-        // SQLite writes happen inside filterJobs → applyJobFilters.
-        // All scraped jobs (pass or fail) are stored for fast-path reuse.
         const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob);
 
         recordScrapeMetrics('lever', {

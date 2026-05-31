@@ -10,14 +10,14 @@ Scrapes six job boards simultaneously and emails you a spreadsheet of new postin
 
 ```bash
 # 1. Install dependencies
-pnpm install
+npm install
 
 # 2. Configure environment
 cp .env.example .env
 # Edit .env — set EMAIL_RECIPIENT, MAILTRAP_TOKEN, and your filter keywords
 
 # 3. Start the server
-pnpm start
+npm start
 # → Server listening at http://localhost:7777
 ```
 
@@ -31,12 +31,13 @@ All scraper endpoints accept an optional JSON body to override filters inline.
 
 | Method | Route | Body params | What it does |
 |--------|-------|-------------|--------------|
-| GET | `/greenhouse` | `embed`, `profile`, `filters` | Scrape Greenhouse job boards |
+| GET | `/greenhouse` | `profile`, `filters` | Scrape Greenhouse job boards |
 | GET | `/lever` | `profile`, `filters` | Scrape Lever job boards |
 | GET | `/workday` | `file_name`, `profile`, `filters` | Scrape Workday (requires RabbitMQ) |
 | GET | `/dice` | `page_number`, `profile`, `filters` | Scrape Dice.com |
 | GET | `/oracloud` | `profile`, `filters` | Scrape Oracle Cloud |
 | GET | `/ash` | `profile`, `filters` | Scrape Ashby HQ |
+| POST | `/cleanup` | `portals` (optional) | Probe every company; flag 403/404 slugs into a report |
 | GET | `/latest` | — | Email today's Excel file to `EMAIL_RECIPIENT` |
 | GET | `/health` | — | Returns `HEALTH_CHECK` env value |
 
@@ -132,6 +133,35 @@ WORKDAY_OFFSET=200   # max job stubs to fetch per company
 
 ---
 
+## Maintaining the Company Lists
+
+Each portal except Dice is multi-tenant and requires a list of company slugs/IDs in `app/companies/<portal>/`. Companies regularly move ATSes or shut down their boards, leaving 404s in the lists. The project ships three tools to keep these lists clean:
+
+| Tool | What it does |
+|---|---|
+| `POST /cleanup` | Probes every company via each portal's JSON API. Writes `reports/stale-companies-<date>.csv` with `stale` (404/403) and `unknown` (5xx/timeout) rows. Optional `{"portals":[…]}` body. |
+| `node scripts/find-portal.js` | For each slug, probes other portals to see where the company moved (e.g. Greenhouse → Ashby). Writes `reports/portal-discovery-<date>.csv`. |
+| `node scripts/apply-cleanup.js` | Mutates `app/companies/<portal>/*.csv` and `*.json`: removes stale slugs, optionally appends re-homed slugs to the new portal. Dry-run by default — pass `--apply` to write. |
+
+**End-to-end workflow:**
+```bash
+# 1. Identify stale slugs
+curl -sX POST http://localhost:7777/cleanup -H "Content-Type: application/json" -d '{"portals":["greenhouse"]}'
+
+# 2. Discover re-home matches across other portals
+node scripts/find-portal.js
+
+# 3. Apply removals + additions (dry-run first to preview)
+node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-$(date +%F).csv
+
+# 4. Review the diff and commit
+git diff app/companies/
+```
+
+See [CLAUDE.md](./CLAUDE.md) for the full end-to-end flow including per-portal runs and combining reports.
+
+---
+
 ## Adding a New Portal
 
 Copy `app/templates/blueprint-service.js` — all patterns (fast/slow SQLite cache path, filter pipeline, metrics, Excel output) are documented inline. Wire it in `app/routes/jobs-router.js` and `app/controllers/jobs-controller.js`.
@@ -147,7 +177,7 @@ For a detailed walkthrough of the request lifecycle, fast/slow cache path, Workd
 ## Running Tests
 
 ```bash
-pnpm test
+npm test
 ```
 
 Uses Mocha + Supertest. Test file: `tests/test.js`.

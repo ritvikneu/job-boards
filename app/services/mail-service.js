@@ -11,7 +11,11 @@ const TOKEN = process.env.MAILTRAP_TOKEN;
 const ENDPOINT = "https://send.api.mailtrap.io/";
 
 if (!process.env.EMAIL_RECIPIENT) {
-    logger.warn('[mail-service] WARNING: EMAIL_RECIPIENT is not set. Email sending will fail.');
+    logger.warn('EMAIL_RECIPIENT is not set — /latest will fail to send mail.');
+} else if (!TOKEN) {
+    // Recipient is configured but the token is not — the user expects mail but
+    // it will silently no-op. Surface this as an error at boot so it gets noticed.
+    logger.error('MAILTRAP_TOKEN is not set but EMAIL_RECIPIENT is — /latest will fail.');
 }
 
 const RECIPIENT_EMAIL = process.env.EMAIL_RECIPIENT;

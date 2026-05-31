@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import axios from 'axios';
-import jsdom from 'jsdom';
 import pLimit from 'p-limit';
 import { config } from 'dotenv';
 
@@ -8,21 +7,23 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
+import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
-const fileHandler     = new FileHandler();
+const fileHandler      = new FileHandler();
 const defaultFilterJob = new FilterJobs();
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const GH_STANDARD_BASE_URL = 'https://job-boards.greenhouse.io/';
-export const GH_EMBED_BASE_URL    = 'https://boards.greenhouse.io/embed/job_board?for=';
-const GH_STANDARD_ROUTE    = 'routes/$url_token';
-const GH_EMBED_ROUTE       = 'routes/embed.job_board';
+// Greenhouse's official JSON API. Returns the full board for any slug in a
+// single call (no pagination), works for both legacy embed and modern boards,
+// and exposes `updated_at` (catches resurfacing jobs — the HTML board only
+// exposes `published_at`, which is creation-only).
+export const GH_API_BASE_URL = 'https://boards-api.greenhouse.io/v1/boards/';
 
-const CONCURRENCY_LIMIT  = 50;    // max parallel company scrapes
+const CONCURRENCY_LIMIT  = 50;
 const REQUEST_TIMEOUT_MS = 15000;
 const RETRY_DELAY_MS     = 10000;
 const MAX_RETRIES        = 2;
@@ -36,16 +37,13 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
 
 /**
  * Reads a Greenhouse company slugs CSV, deduplicates entries, and returns an
- * array of { name, link } objects ready for scraping.
+ * array of { name, link } objects ready for scraping. `link` is the API URL
+ * for the board (used by both the scraper and cleanup probes).
  *
  * Lines starting with '#' are treated as comments and skipped.
- *
- * @param {string} fileName - base name of the CSV (e.g. 'gh-io' or 'gh-embed')
- * @param {string} baseUrl  - Greenhouse board base URL for this mode
- * @param {Logger} logger
- * @returns {{ name: string, link: string }[]}
  */
-export const loadCompanies = (fileName, baseUrl, logger) => {
+export const loadCompanies = (fileName, logger) => {
+    ensureSafeFileName(fileName);
     const csvFilePath = `app/companies/greenhouse/${fileName}.csv`;
     logger.info(`Loading companies from: ${csvFilePath}`);
 
@@ -57,7 +55,7 @@ export const loadCompanies = (fileName, baseUrl, logger) => {
 
         const companies = [...new Set(rows)].map((name) => ({
             name,
-            link: `${baseUrl}${name}`,
+            link: `${GH_API_BASE_URL}${name}/jobs`,
         }));
 
         logger.info(`Companies loaded: ${companies.length}`);
@@ -71,108 +69,43 @@ export const loadCompanies = (fileName, baseUrl, logger) => {
 // ─── Step 2: Scrape Listing Pages ─────────────────────────────────────────────
 
 /**
- * Parses the window.__remixContext script tag from a Greenhouse page and
- * returns the jobPosts object ({ total_pages, data }) for the given route key.
- *
- * Greenhouse inlines all job data as JSON inside a <script> tag rather than
- * via a separate API, so we find and parse that script block.
- *
- * Returns null if the expected data structure is absent or malformed.
- *
- * @param {string} html     - raw HTML from the Greenhouse board page
- * @param {string} routeKey - e.g. 'routes/$url_token' or 'routes/embed.job_board'
- * @returns {{ total_pages: number, data: object[] } | null}
- */
-const extractJobsFromPage = (html, routeKey) => {
-    const dom      = new jsdom.JSDOM(html);
-    const document = dom.window.document;
-
-    const scriptEl = Array.from(document.querySelectorAll('script')).find(
-        (s) => s.textContent.includes('window.__remixContext')
-    );
-    if (!scriptEl) return null;
-
-    const match = scriptEl.textContent.match(/window\.__remixContext\s*=\s*({[\s\S]*?});/);
-    if (!match) return null;
-
-    try {
-        const remixContext = JSON.parse(match[1]);
-        return remixContext?.state?.loaderData?.[routeKey]?.jobPosts ?? null;
-    } catch {
-        return null;
-    }
-};
-
-/**
- * Fetches all pages of a single company's Greenhouse job board and returns
- * all job postings mapped to our schema. Retries on transient failures.
- *
- * Greenhouse paginates via ?page=N. We read total_pages from page 1 and
- * fetch subsequent pages sequentially within the company to avoid duplicates.
+ * Fetches a single company's Greenhouse board via the JSON API and maps each
+ * posting to our internal schema. Single GET — no pagination.
  *
  * 404 → warn (stale slug, board removed). 403 → warn (private board).
  * 429/other → retry up to MAX_RETRIES, then error + StatsD error counter.
- *
- * @param {object} company     - { name, link }
- * @param {string} routeKey    - remix route key for this board mode
- * @param {number} retriesLeft
- * @param {Logger} logger
- * @returns {object[]}         - mapped job objects, or [] on any failure
  */
-const fetchJobsForCompany = async (company, routeKey, retriesLeft, logger) => {
-    const allJobs = [];
-
+const fetchJobsForCompany = async (company, retriesLeft, logger) => {
     try {
-        let totalPages = 1;
+        const response = await axios.get(company.link, { timeout: REQUEST_TIMEOUT_MS });
+        const jobs     = response.data?.jobs ?? [];
 
-        for (let page = 1; page <= totalPages; page++) {
-            const url      = page === 1 ? company.link : `${company.link}?page=${page}`;
-            const response = await axios.get(url, { timeout: REQUEST_TIMEOUT_MS });
+        const mapped = jobs
+            .filter((j) => j.absolute_url)
+            .map((j) => ({
+                job_id:       String(j.id ?? ''),
+                job_title:    j.title ?? '',
+                // updated_at reflects refresh time, so re-promoted listings show as fresh.
+                posting_date: j.updated_at
+                    ? new Date(j.updated_at).toISOString().split('T')[0]
+                    : null,
+                location:     j.location?.name ?? '',
+                company_name: company.name,
+                job_link:     j.absolute_url,
+            }));
 
-            const jobPosts = extractJobsFromPage(response.data, routeKey);
-
-            if (!jobPosts) {
-                logger.warn(`No job data in page for ${company.name} (page ${page})`);
-                break;
-            }
-
-            // Read pagination info from first page only
-            if (page === 1) {
-                totalPages = jobPosts.total_pages ?? 1;
-            }
-
-            for (const job of jobPosts.data ?? []) {
-                if (!job.absolute_url) continue;  // skip postings without a link
-
-                allJobs.push({
-                    job_id:       String(job.id ?? ''),
-                    job_title:    job.title ?? '',
-                    posting_date: job.published_at
-                        ? new Date(job.published_at).toISOString().split('T')[0]
-                        : null,
-                    location:     job.location ?? '',
-                    company_name: company.name,
-                    job_link:     job.absolute_url,
-                });
-            }
+        if (mapped.length > 0) {
+            logger.debug(`${company.name}: ${mapped.length} postings found`);
         }
-
-        if (allJobs.length > 0) {
-            logger.debug(`${company.name}: ${allJobs.length} postings found`);
-        }
-
-        return allJobs;
+        return mapped;
 
     } catch (err) {
         const status = err.response?.status;
 
-        // 404 = board removed or slug is stale — warn, do not retry
         if (status === 404) {
             logger.warn(`Company not found on Greenhouse (404) — slug may be stale: ${company.name}`);
             return [];
         }
-
-        // 403 = board is private or access restricted — warn, do not retry
         if (status === 403) {
             logger.warn(`Access denied (403) for ${company.name} — board may be private`);
             return [];
@@ -182,7 +115,7 @@ const fetchJobsForCompany = async (company, routeKey, retriesLeft, logger) => {
             const reason = status === 429 ? 'rate limited (429)' : err.message;
             logger.warn(`Retrying ${company.name} (${retriesLeft} left) — ${reason}`);
             await delay(RETRY_DELAY_MS);
-            return fetchJobsForCompany(company, routeKey, retriesLeft - 1, logger);
+            return fetchJobsForCompany(company, retriesLeft - 1, logger);
         }
 
         logger.error(`Listing fetch failed for ${company.name}: ${err.message}`);
@@ -192,22 +125,16 @@ const fetchJobsForCompany = async (company, routeKey, retriesLeft, logger) => {
 };
 
 /**
- * Fans out listing page scraping across all companies concurrently.
- * pLimit caps simultaneous requests to CONCURRENCY_LIMIT to avoid
- * overwhelming Greenhouse servers or triggering aggressive rate limiting.
- *
- * @param {object[]} companies
- * @param {string}   routeKey
- * @param {Logger}   logger
- * @returns {object[]} flat array of all job objects from all companies
+ * Fans out API fetches across all companies concurrently. pLimit caps
+ * simultaneous requests so we stay below the API's rate-limit thresholds.
  */
-const scrapeAllCompanies = async (companies, routeKey, logger) => {
+const scrapeAllCompanies = async (companies, logger) => {
     const startTime = Date.now();
     logger.info(`Starting concurrent scrape for ${companies.length} companies (limit: ${CONCURRENCY_LIMIT})`);
 
     const limit   = pLimit(CONCURRENCY_LIMIT);
     const results = await Promise.all(
-        companies.map((company) => limit(() => fetchJobsForCompany(company, routeKey, MAX_RETRIES, logger)))
+        companies.map((company) => limit(() => fetchJobsForCompany(company, MAX_RETRIES, logger)))
     );
 
     const allJobs           = results.flat();
@@ -224,30 +151,14 @@ const scrapeAllCompanies = async (companies, routeKey, logger) => {
 // ─── Step 3: Filter Jobs ──────────────────────────────────────────────────────
 
 /**
- * Runs a single job through the full filter pipeline, with two execution paths:
- *
- * FAST PATH (job already in SQLite from a previous run):
- *   - Use cached title, location, and posting_date — zero HTTP calls.
- *   - Apply all three filters against cached data and return.
- *
- * SLOW PATH (new job, not yet in SQLite):
- *   - Store the job immediately (date is available from the scrape response,
- *     unlike Lever which needs a separate per-job HTTP fetch).
- *   - Apply location, title, and date filters in order.
- *
- * Greenhouse provides posting_date directly in the board page response,
- * so there is no N+1 HTTP fetch at any point in the pipeline.
- *
- * @param {object}     job
- * @param {Logger}     logger
- * @param {FilterJobs} filterJob
- * @returns {object|null} job if it passes all filters, null otherwise
+ * Runs a single job through the filter pipeline with the standard fast/slow
+ * path. The API returns posting_date inline, so there is no N+1 fetch
+ * anywhere in this scraper.
  */
-const applyJobFilters = async (job, logger, filterJob) => {
+const applyJobFilters = async (job, logger, filterJob, portal) => {
     if (!job?.job_link) return null;
 
     try {
-        // ── Fast path: job was seen on a previous run ──────────────────────────
         const cached = getJob(job.job_link);
 
         if (cached) {
@@ -258,9 +169,8 @@ const applyJobFilters = async (job, logger, filterJob) => {
             return cached;
         }
 
-        // ── Slow path: new job not yet in the database ──────────────────────────
         // Store first so future runs use the fast path regardless of filter outcome.
-        upsertJob(job, 'greenhouse');
+        upsertJob(job, portal);
 
         if (!filterJob.matchesLocation(job.location))        return null;
         if (!filterJob.matchesTitle(job.job_title))          return null;
@@ -275,20 +185,13 @@ const applyJobFilters = async (job, logger, filterJob) => {
     }
 };
 
-/**
- * Applies the full filter pipeline to all scraped jobs concurrently,
- * then sorts survivors by posting date descending (newest first).
- *
- * SQLite writes happen inside applyJobFilters so ALL jobs are persisted,
- * not just the ones that pass filtering.
- */
-const filterJobs = async (jobs, logger, filterJob) => {
+const filterJobs = async (jobs, logger, filterJob, portal) => {
     const startTime = Date.now();
     logger.info(`Filtering ${jobs.length} jobs by location, title, and date rules`);
 
     const limit   = pLimit(CONCURRENCY_LIMIT);
     const results = await Promise.all(
-        jobs.map((job) => limit(() => applyJobFilters(job, logger, filterJob)))
+        jobs.map((job) => limit(() => applyJobFilters(job, logger, filterJob, portal)))
     );
 
     const validJobs = results
@@ -306,51 +209,23 @@ const filterJobs = async (jobs, logger, filterJob) => {
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
 
 /**
- * Entry point for the Greenhouse scraper pipeline.
- *
- * Supports both standard (job-boards.greenhouse.io) and embed
- * (boards.greenhouse.io/embed) modes via the embed flag.
- *
- * Orchestrates three stages in sequence:
- *   1. Load company slugs from CSV
- *   2. Scrape each company's Greenhouse job board (all pages, concurrently)
- *   3. Filter by location, title, and date
- *   4. Write surviving jobs to an Excel file
- *
- * Key design notes:
- *   - SQLite writes happen inside applyJobFilters so ALL scraped jobs are
- *     persisted — not just the filtered ones. Subsequent runs use the fast
- *     path (cached data, zero HTTP) for any job seen before.
- *   - Greenhouse provides posting_date in the board page response, so there
- *     is no per-job HTTP fetch at any point (unlike Lever).
- *   - pLimit(50) caps concurrent requests — previously unlimited (all 2000+
- *     companies fired simultaneously).
- *   - 404/403 responses are logged as warnings, not errors.
- *   - StatsD metrics are emitted for dashboards.
- *
- * @param {boolean}    embed     - true for embed board mode, false for standard
- * @param {FilterJobs} filterJob - per-request config; defaults to env-based singleton
- * @returns {object[]} final filtered job array
+ * Entry point for the Greenhouse scraper. Reads slugs from FILE_GH and hits
+ * the official JSON API for each board.
  */
-export const runGreenhouseScraper = async (embed = false, filterJob = defaultFilterJob) => {
-    const fileName = embed ? process.env.FILE_EMBED : process.env.FILE_GH;
-    const baseUrl  = embed ? GH_EMBED_BASE_URL    : GH_STANDARD_BASE_URL;
-    const routeKey = embed ? GH_EMBED_ROUTE       : GH_STANDARD_ROUTE;
-    const portal   = embed ? 'greenhouse-embed'   : 'greenhouse';
+export const runGreenhouseScraper = async (filterJob = defaultFilterJob) => {
+    const fileName = process.env.FILE_GH;
+    const portal   = 'greenhouse';
 
     const logger    = createCustomLogger(fileName);
     const startTime = Date.now();
 
-    logger.info(`=== Greenhouse Scraper Started (${embed ? 'embed' : 'standard'}) | ${new Date().toISOString()} ===`);
+    logger.info(`=== Greenhouse Scraper Started | ${new Date().toISOString()} ===`);
 
     try {
-        const companies = loadCompanies(fileName, baseUrl, logger);
+        const companies   = loadCompanies(fileName, logger);
+        const scrapedJobs = await scrapeAllCompanies(companies, logger);
 
-        const scrapedJobs = await scrapeAllCompanies(companies, routeKey, logger);
-
-        // SQLite writes happen inside filterJobs → applyJobFilters.
-        // All scraped jobs (pass or fail) are stored for fast-path reuse.
-        const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob);
+        const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob, portal);
 
         recordScrapeMetrics(portal, {
             durationMs:     Date.now() - startTime,

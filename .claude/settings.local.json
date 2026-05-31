@@ -51,7 +51,7 @@
       "Bash(curl -sw \"status=%{http_code}\\\\n\" -o /dev/null \"https://jobs.lever.co/netflix\")",
       "Bash(rm -f reports/portal-discovery-*.csv)",
       "Bash(node scripts/find-portal.js --from-file /tmp/find-portal-test.txt)",
-      "Bash(pnpm start *)",
+      "Bash(npm start)",
       "Bash(echo \"started pid $!\")",
       "Bash(curl -sf http://localhost:7777/health -o /dev/null)",
       "Read(//private/tmp/**)",
@@ -64,10 +64,45 @@
       "Bash(curl -sw \"html=%{http_code} \" -o /dev/null \"https://jobs.lever.co/sanctuary\")",
       "Bash(curl -sw \"api=%{http_code}\\\\n\" -o /dev/null \"https://api.lever.co/v0/postings/sanctuary\")",
       "Bash(awk -F, 'NR>1 {print $1}' reports/stale-companies-2026-05-17.csv)",
-      "Bash(xargs kill)"
+      "Bash(xargs kill)",
+      "Bash(node server.js)",
+      "Bash(node scripts/find-portal.js)",
+      "Bash(grep -n \"^supabase$\" app/companies/ashbyhq/ash.csv)",
+      "Bash(grep -c \"^supabase$\" app/companies/greenhouse/gh-io.csv app/companies/greenhouse/gh-embed.csv)",
+      "Bash(grep -c \"^acorns$\" app/companies/greenhouse/gh-io.csv app/companies/greenhouse/gh-embed.csv)",
+      "Bash(grep -n \"^1password$\" app/companies/ashbyhq/ash.csv)",
+      "Bash(grep -c \"^1password$\" app/companies/greenhouse/gh-io.csv app/companies/greenhouse/gh-embed.csv)",
+      "Bash(awk -F, '$1==\"1password\"' reports/portal-discovery-2026-05-17.csv)",
+      "Bash(curl -s \"https://boards-api.greenhouse.io/v1/boards/stripe/jobs\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d['jobs'][0]; print\\('keys:', list\\(j.keys\\(\\)\\)\\)\")",
+      "Bash(curl -s \"https://api.lever.co/v0/postings/netflix\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('keys:', list\\(d[0].keys\\(\\)\\) if isinstance\\(d, list\\) and d else d\\)\")",
+      "Bash(curl -s \"https://api.ashbyhq.com/posting-api/job-board/vercel\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); j=d.get\\('jobs',[None]\\)[0]; print\\('top:',list\\(d.keys\\(\\)\\)\\); print\\('job:',list\\(j.keys\\(\\)\\) if j else 'no jobs'\\)\")",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s -o /tmp/dice_probe.json -w \"HTTP %{http_code}\\\\n\" \"https://job-search-api.svc.dhigroupinc.com/v1/dice/jobs/search?pageSize=1&q=software&filters.postedDate=ONE\")",
+      "WebSearch",
+      "Bash(cp /tmp/gh-io-merged.csv /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse/gh-io.csv)",
+      "Bash(rm /Users/ritvikparamkusham/Downloads/Projects/job-boards-versions/job-boards/app/companies/greenhouse/gh-embed.csv)",
+      "WebFetch(domain:github.com)",
+      "Bash(node *)",
+      "Bash(grep -cE \"^benevity$|^propel$\" app/companies/ashbyhq/ash.csv)",
+      "Bash(grep -cE \"^\\(benevity|cfa|hebbia|imagentechnologies|mintmobile|neocybernetica|opendoor|propel|ultramobile\\)$\" app/companies/greenhouse/gh-io.csv)"
     ],
     "additionalDirectories": [
       "/private/tmp"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
     ]
   }
 }

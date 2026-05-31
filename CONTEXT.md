@@ -32,11 +32,29 @@
 **Port:** `7777`
 **Entry point:** `server.js`
 **Active git branch:** `cloudwatch`
-**Package manager:** pnpm
+**Package manager:** npm
 
 ---
 
 ## 2. Current Architecture
+
+### High-level component map
+
+```
+HTTP API (Express)        Scrapers                Maintenance (out-of-band)
+─────────────────         ─────────               ─────────────────────────
+POST /cleanup             greenhouse-service      scripts/find-portal.js
+GET  /greenhouse          lever-service           scripts/apply-cleanup.js
+GET  /lever               ash-service             scripts/validate-companies.js
+GET  /ash                 wday-rabbit             scripts/test-scrapers.js
+GET  /workday             oraclecloud-service
+GET  /oracloud            dice-service
+GET  /dice                                        ↓ reads/writes
+GET  /latest                                      app/companies/<portal>/*.{csv,json}
+GET  /health
+   ↓
+shared: filtering-service, profile-service, sqlite-service, logger, metrics
+```
 
 ### Directory layout
 
@@ -56,12 +74,14 @@ app/
 │   │                                 (module-level regex cache + env var cache)
 │   ├── profile-service.js         ← resolveFilterConfig(): body.filters > body.profile > .env
 │   ├── http-client.js             ← shared axios instance (keepAlive, maxSockets: 50, timeout: 15s)
-│   ├── greenhouse_v2-service.js   ← runGreenhouseScraper(embed, filterJob)
+│   ├── greenhouse-service.js      ← runGreenhouseScraper(filterJob)
 │   ├── lever-service.js           ← runLeverScraper(filterJob)
-│   ├── ash2-service.js            ← runAshScraper(filterJob)
+│   ├── ash-service.js             ← runAshScraper(filterJob)
 │   ├── wday-rabbit.js             ← runWorkdayScraper(file_name, filterJob)
 │   ├── oraclecloud-service.js     ← runOracleCloudScraper(filterJob)
 │   ├── dice-service.js            ← runDiceScraper(page_number, filterJob)
+│   ├── cleanup-service.js         ← runCleanup({portals?}) — probes every company via official
+│   │                                 JSON APIs; flags 403/404 slugs; writes stale CSV report
 │   ├── file_creation-service.js   ← FileHandler: writeToExcel(), getLatestJobs() → email
 │   ├── mail-service.js            ← Mailtrap transport + sendMail/sendMailAttachment
 │   │                                 (path-traversal guard, EMAIL_RECIPIENT from env)
@@ -92,8 +112,21 @@ app/
     ├── blueprint-service.js       ← copy-paste template for a new portal scraper
     └── README.md                  ← pattern reference for adding portals
 
-logs/                              ← auto-created; per-service daily-rotated Winston log files
+scripts/                           ← standalone maintenance utilities (not part of the server)
+├── find-portal.js                 ← Given a slug list (from a stale-companies report or text
+│                                     file), probe Greenhouse/Lever/Ashby JSON APIs to discover
+│                                     which portal currently hosts each company. Output:
+│                                     reports/portal-discovery-YYYY-MM-DD.csv
+├── apply-cleanup.js               ← Mutates app/companies/<portal>/*.{csv,json}: removes
+│                                     stale slugs (from stale-companies report) and optionally
+│                                     appends re-homed slugs (from --rehome <discovery.csv>).
+│                                     Dry-run by default; --apply to write.
+├── test-scrapers.js               ← ad-hoc scraper smoke tests
+└── validate-companies.js          ← lints company list files for malformed entries
+
+reports/                           ← gitignored; cleanup + discovery output
 .env.example                       ← documented template of all environment variables
+logs/                              ← auto-created; per-service daily-rotated Winston log files
 ```
 
 ---
@@ -118,7 +151,7 @@ jobs-controller.js: getGreenhouse()
   │  new FilterJobs(config)             ← builds TitleChecker + LocationChecker
   │
   ▼
-greenhouse_v2-service.js: runGreenhouseScraper(embed, filterJob)
+greenhouse-service.js: runGreenhouseScraper(filterJob)
   │
   ├─ loadCompanies()         reads CSV → [{ name, link }]
   ├─ scrapeAllCompanies()    pLimit(50) parallel company scrapes
@@ -195,7 +228,46 @@ runWorkdayScraper()
 - `"Posted 30+ Days Ago"` → 30 days ago (conservative lower bound)
 - Unknown format → `null` (fail-open — stub is NOT rejected)
 
-### 3e. Filtering logic (`filtering-service.js`)
+### 3e. Company-list maintenance pipeline
+
+Each multi-tenant portal (everything except Dice) needs a list of company slugs/IDs in `app/companies/<portal>/`. Companies move ATSes, slugs change, boards go private — leaving stale entries that waste scrape time and produce noise. A three-step pipeline keeps these lists healthy:
+
+```
+POST /cleanup                  ← identify stale (cleanup-service.js)
+  └─ probe every slug via the portal's official JSON API:
+        greenhouse → boards-api.greenhouse.io/v1/boards/<slug>/jobs
+        lever      → api.lever.co/v0/postings/<slug>
+        ashby      → api.ashbyhq.com/posting-api/job-board/<slug>
+        oracloud   → company.url (already an API endpoint)
+        workday    → POST to company.link with {limit:1, offset:0, searchText:''}
+  → reports/stale-companies-YYYY-MM-DD.csv
+        category=stale (403/404 — safe to remove)
+        category=unknown (5xx/timeout — inconclusive, re-run that portal alone)
+
+node scripts/find-portal.js    ← re-home stale slugs to other portals
+  └─ for each slug, probe greenhouse + ashby + lever via JSON APIs
+        (skips the slug's original portal; first 2xx wins)
+  → reports/portal-discovery-YYYY-MM-DD.csv
+        slug,original_portal,found_in,found_url,status
+        found_in='none' for slugs that didn't match anywhere
+
+node scripts/apply-cleanup.js [--apply] [--rehome <discovery.csv>]
+  └─ remove confirmed-stale (category=stale only) slugs from source files
+  └─ optionally append re-homed slugs to the target portal's CSV (deduped)
+  → mutates app/companies/<portal>/*.{csv,json}
+        (dry-run by default; git diff is the audit trail)
+```
+
+**Why we probe APIs, not HTML.** Initial probes used the HTML board URLs (e.g. `jobs.lever.co/<slug>`) and produced wildly wrong results:
+- `job-boards.greenhouse.io` returns **406** to every non-browser GET regardless of headers — turning thousands of live slugs into false-unknowns
+- `jobs.ashbyhq.com` is an SPA shell that returns **200 for any slug** — producing false-positives in discovery
+- `jobs.lever.co` returns **404 for live boards** — false-stales
+
+All three portals' official JSON APIs return clean 200/404 signals, so cleanup-service.js and find-portal.js both standardize on those endpoints. (The live scrapers in `greenhouse-service.js`, `lever-service.js`, `ash-service.js` still hit HTML pages because they need the inline job data — that's a separate concern and not part of the cleanup probe path.)
+
+**Per-portal dedup.** Workday's `wday.json`, `wday1.json`, `wday2.json` overlap; cleanup-service.js dedups by slug across files within a portal so the same company isn't reported twice.
+
+### 3f. Filtering logic (`filtering-service.js`)
 
 `FilterJobs` contains two inner classes:
 
@@ -227,7 +299,7 @@ All env vars (`JOB_TITLES`, `IGNORE_TITLES`, `COUNTRIES`, `STATES`, `STATES_ABBR
 
 ```bash
 # 1. Install dependencies
-pnpm install
+npm install
 
 # 2. Set environment variables
 cp .env.example .env
@@ -238,7 +310,7 @@ cp .env.example .env
 docker run -d --hostname rabbit --name rabbitmq -p 5672:5672 rabbitmq:3
 
 # 4. Start the server
-pnpm start         # runs: node server.js
+npm start          # runs: node server.js
 # Server starts at port 7777
 # SQLite DB is created automatically at app/data/jobs.db on first run
 # cleanOldJobs(30) removes stale data on every startup
@@ -252,7 +324,7 @@ curl -X GET http://localhost:7777/greenhouse \
 curl http://localhost:7777/health
 
 # 7. Run tests
-pnpm test          # runs: mocha --exit tests/test.js
+npm test           # runs: mocha --exit tests/test.js
 ```
 
 **Required env vars (minimum to run any scraper):**
@@ -271,7 +343,6 @@ POSTING_DIFF=10
 
 # Company files
 FILE_GH=gh-io
-FILE_EMBED=gh-embed
 FILE_LEVER=lever
 FILE_ASH=ash
 WORKDAY_OFFSET=200
@@ -475,13 +546,15 @@ When Lever stores a job without `posting_date` (because it failed location/title
 
 | ID | Status | Description |
 |---|---|---|
-| Phase 5g | Pending | Dead company CSV audit — some slugs in CSV files return 404 (company moved away from the portal). Needs a real scrape run to identify which slugs are dead. |
-| GH-slugs | Pending | After running Greenhouse, log warnings for every 404/403 company and remove those slugs from the CSV files. |
+| Phase 5g | **Done** | Dead company CSV audit — implemented via `POST /cleanup` + `scripts/apply-cleanup.js`. See section 3e. |
+| GH-slugs | **Done** | Replaced by the cleanup pipeline. `POST /cleanup` reports every 403/404 slug; `scripts/apply-cleanup.js --apply` removes them from CSVs. |
 | Phase 6 | Pending | Unit tests — `tests/test.js` exists but content is not yet implemented. Plan: mocha + nock (HTTP mocking) + sinon (stubs). |
+| Scheduling | Designed, not built | Recurring cleanup + scrape pipelines designed in [docs/scheduling.md](docs/scheduling.md). Cleanup via GitHub Actions (weekly PR), scrapers via systemd timer on EC2 (daily). |
 | OracleCloud env | Missing | The Oracle Cloud service hardcodes `'oracloud'` as the file name. Should read from `process.env.FILE_ORA` for consistency. |
 | RabbitMQ resilience | None | If `RABBITMQ_URL` is unset or RabbitMQ is down, the `/workday` endpoint crashes. There is no graceful degradation or fallback. |
 | Dice API key | Hardcoded | `DICE_API_KEY = '1YAt0R9wBg4WfsF9VB2778F5CHLAPMVW3WAZcKd8'` is hardcoded in `dice-service.js:19`. Should be moved to `.env`. |
 | http-client adoption | Partial | `app/services/http-client.js` is created but individual scrapers still import `axios` directly. Migrate each scraper to use the shared instance for full keep-alive benefit. |
+| Scraper uses HTML | Pending | Greenhouse/Lever/Ashby live scrapers still hit HTML pages; consider migrating to the same JSON APIs that the cleanup probes use (more reliable, simpler parsing). |
 
 ---
 

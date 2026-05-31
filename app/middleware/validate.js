@@ -24,9 +24,7 @@ const diceBodySchema = filtersSchema.extend({
     page_number: z.number().int().min(1).max(100).optional(),
 });
 
-const greenhouseBodySchema = filtersSchema.extend({
-    embed: z.boolean().optional(),
-});
+const greenhouseBodySchema = filtersSchema;
 
 // ─── Middleware factory ───────────────────────────────────────────────────────
 

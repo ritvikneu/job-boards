@@ -5,6 +5,9 @@ node_modules
 .DS_Store
 logs/
 reports/
+
+# Discovery scraper — internal tool, kept out of git per project preference
+scripts/discover-from-sources.js
 app/data/*.db
 app/data/*.db-shm
 app/data/*.db-wal
@@ -12,6 +15,16 @@ copies
 data
 structures
 IAC
+# Terraform state and var files must never be tracked — state holds resource
+# secrets, vars typically hold credentials. The IAC-Terraform/*.tf source files
+# (main, provider, variables, versions) remain tracked.
+IAC-Terraform/terraform.tfstate
+IAC-Terraform/terraform.tfstate.backup
+IAC-Terraform/terraform.tfvars
+IAC-Terraform/terraform.tfvars.dev
+*.tfstate
+*.tfstate.backup
+*.tfvars
 .terraform
 .terraform.lock.hcl
 .terraform.lock.hcl.backup

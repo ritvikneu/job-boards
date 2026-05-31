@@ -12,10 +12,19 @@ const logger = createCustomLogger('app');
 
 const app = express();
 
+// Trust the first proxy hop (ALB/CloudFront). Required for express-rate-limit
+// to read X-Forwarded-For instead of bucketing every request as the proxy IP.
+app.set('trust proxy', 1);
+
 // ─── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
+// Fail closed in production: a missing CORS_ORIGIN on prod is almost always a
+// misconfigured deploy, not "use the localhost default".
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+    throw new Error('CORS_ORIGIN must be set when NODE_ENV=production');
+}
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000' }));
 
 // ─── Request body parsing (with size limit) ───────────────────────────────────

@@ -7,7 +7,7 @@ echo "+-------------------------------------------------------------+"
 echo "sudo apt update"
 sudo apt update 
 
-echo "Node and pnpm"
+echo "Node and npm"
 sudo apt install nodejs npm -y
 
 echo "Node and npm version version"

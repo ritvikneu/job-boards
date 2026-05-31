@@ -7,6 +7,7 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
+import { ensureSafeFileName } from './_filename-guard.js';
 import { getJob, upsertJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -40,6 +41,7 @@ const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
  * @returns {{ companyName: string, url: string, jobSearchUrl: string }[]}
  */
 const loadCompanies = (fileName, logger) => {
+    ensureSafeFileName(fileName);
     const filePath = `app/companies/oracloud/${fileName}.json`;
     logger.info(`Loading companies from: ${filePath}`);
 
