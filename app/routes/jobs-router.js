@@ -34,4 +34,10 @@ router.route('/latest')
 router.route('/health')
         .get(jobsController.HealthCheck);
 
+router.route('/jobs')
+        .get(generalLimiter, jobsController.getJobsView);
+
+router.route('/jobs/status')
+        .patch(jobsController.patchJobStatus);
+
 export default router;

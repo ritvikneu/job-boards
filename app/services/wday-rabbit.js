@@ -7,7 +7,7 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { getJobByJobId, upsertJob } from '../database/sqlite-service.js';
+import { getJobByJobId, upsertJob, touchJob } from '../database/sqlite-service.js';
 import { producer, getNextMessages, closeConnection } from './rabbitMQ-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
@@ -337,6 +337,7 @@ const consumerWorker = async (workerId, qname, processedJobs, seenLinks, logger)
             results.forEach(({ cached, jobData, message, companyName }) => {
                 if (cached) {
                     // Fast path: zero HTTP calls — return stored data as-is
+                    touchJob(cached.job_link);
                     if (!seenLinks.has(cached.job_link)) {
                         seenLinks.add(cached.job_link);
                         processedJobs.push(cached);

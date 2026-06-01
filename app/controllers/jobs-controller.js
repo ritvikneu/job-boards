@@ -9,6 +9,8 @@ import { FilterJobs } from '../services/filtering-service.js';
 import { resolveFilterConfig } from '../services/profile-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 
+import { queryJobs, updateJobStatus } from '../database/sqlite-service.js';
+
 import { config } from 'dotenv';
 config();
 
@@ -105,4 +107,20 @@ export const getLatestJobs = async (request, response, next) => {
 
 export const HealthCheck = (request, response) => {
     response.status(200).json({ message: process.env.HEALTH_CHECK });
+};
+
+const VALID_STATUSES = new Set(['new', 'interested', 'applied', 'saved', 'rejected']);
+
+export const getJobsView = (request, response) => {
+    const jobs = queryJobs();
+    response.json(jobs);
+};
+
+export const patchJobStatus = (request, response) => {
+    const { job_link, status } = request.body ?? {};
+    if (!job_link || !VALID_STATUSES.has(status)) {
+        return response.status(400).json({ error: 'job_link and a valid status are required' });
+    }
+    updateJobStatus(job_link, status);
+    response.json({ ok: true });
 };

@@ -1,0 +1,166 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+
+.topbar {
+  background: #0f172a;
+  color: white;
+  padding: 0 20px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.topbar-brand { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+.topbar-stats { display: flex; gap: 16px; color: #94a3b8; font-size: 12px; }
+.topbar-stats span { display: flex; align-items: center; gap: 4px; }
+.topbar-stats .highlight { color: #38bdf8; font-weight: 600; }
+.spacer { flex: 1; }
+.topbar-date { color: #64748b; font-size: 12px; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.search-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #1e293b;
+  width: 200px;
+  background: #f8fafc;
+  outline: none;
+}
+.search-box:focus { border-color: #93c5fd; background: white; }
+.pill-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  color: #475569;
+  transition: background 0.1s, color 0.1s;
+}
+.pill:hover { background: #e2e8f0; }
+.pill.active { background: #1e293b; color: white; border-color: #1e293b; }
+.pill.pill-new.active        { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.pill.pill-interested.active { background: #fef9c3; color: #92400e; border-color: #fde68a; }
+.pill.pill-applied.active    { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.pill.pill-saved.active      { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+.pill.pill-rejected.active   { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.divider { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
+.sort-select {
+  margin-left: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+
+.table-wrap { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; background: white; }
+
+thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+tbody tr { border-bottom: 1px solid #f1f5f9; }
+tbody tr:hover { background: #f8fafc; }
+tbody tr.is-new { border-left: 3px solid #3b82f6; }
+
+tbody td { padding: 9px 12px; vertical-align: middle; }
+
+/* ── Status badges ───────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  user-select: none;
+}
+.status-badge:hover { opacity: 0.8; }
+.status-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.badge-new        { background: #eff6ff; color: #2563eb; }
+.badge-new .dot   { background: #3b82f6; }
+.badge-interested        { background: #fef9c3; color: #92400e; }
+.badge-interested .dot   { background: #f59e0b; }
+.badge-applied        { background: #dcfce7; color: #15803d; }
+.badge-applied .dot   { background: #22c55e; }
+.badge-saved        { background: #f3e8ff; color: #7e22ce; }
+.badge-saved .dot   { background: #a855f7; }
+.badge-rejected        { background: #fee2e2; color: #991b1b; }
+.badge-rejected .dot   { background: #ef4444; }
+
+/* ── Table cells ─────────────────────────────────────────────────────────── */
+
+.job-title-link {
+  color: #1e293b;
+  text-decoration: none;
+  font-weight: 500;
+}
+.job-title-link:hover { color: #2563eb; text-decoration: underline; }
+.company { color: #475569; }
+.location { color: #64748b; font-size: 12px; }
+
+.portal-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #475569;
+}
+.portal-badge.ashby      { background: #ecfdf5; color: #065f46; }
+.portal-badge.greenhouse { background: #eff6ff; color: #1e40af; }
+.portal-badge.lever      { background: #fff7ed; color: #9a3412; }
+.portal-badge.oracloud   { background: #fdf4ff; color: #6b21a8; }
+.portal-badge.dice       { background: #fef2f2; color: #991b1b; }
+.portal-badge.workday    { background: #f0fdf4; color: #166534; }
+
+.date { color: #94a3b8; font-size: 12px; white-space: nowrap; }
+.date.today { color: #16a34a; font-weight: 600; }
+
+.loading { text-align: center; padding: 40px; color: #94a3b8; }
+.empty   { text-align: center; padding: 40px; color: #94a3b8; }

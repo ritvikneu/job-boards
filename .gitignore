@@ -30,3 +30,4 @@ IAC-Terraform/terraform.tfvars.dev
 .terraform.lock.hcl.backup
 .terraform.*
 *.log
+.superpowers/
