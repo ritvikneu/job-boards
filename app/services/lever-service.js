@@ -7,7 +7,7 @@ config();
 
 import { FileHandler } from './file_creation-service.js';
 import { FilterJobs } from './filtering-service.js';
-import { getJob, upsertJob } from '../database/sqlite-service.js';
+import { getJob, upsertJob, touchJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
@@ -142,6 +142,7 @@ const applyJobFilters = async (job, logger, filterJob) => {
         const cached = getJob(job.job_link);
 
         if (cached) {
+            touchJob(job.job_link);
             if (!filterJob.matchesLocation(cached.location))         return null;
             if (!filterJob.matchesTitle(cached.job_title))           return null;
             if (!cached.posting_date)                                return null;
@@ -149,10 +150,12 @@ const applyJobFilters = async (job, logger, filterJob) => {
             return cached;
         }
 
-        upsertJob(job, 'lever');
-
+        // Store only after title + location pass — posting date is a result gate only.
         if (!filterJob.matchesLocation(job.location))        return null;
         if (!filterJob.matchesTitle(job.job_title))          return null;
+
+        upsertJob(job, 'lever');
+
         if (!job.posting_date)                               return null;
         if (!filterJob.matchesPostingDate(job.posting_date)) return null;
 

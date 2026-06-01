@@ -8,7 +8,7 @@ config();
 
 import { FilterJobs } from './filtering-service.js';
 import { FileHandler } from './file_creation-service.js';
-import { getJob, upsertJob, updateJobPositionId } from '../database/sqlite-service.js';
+import { getJob, upsertJob, updateJobPositionId, touchJob } from '../database/sqlite-service.js';
 import { createCustomLogger } from '../middleware/logger.js';
 import { recordScrapeMetrics, recordScrapeError } from '../middleware/metrics.js';
 
@@ -145,16 +145,15 @@ export const runDiceScraper = async (page = 1, filterJob = defaultFilterJob) => 
             company_name: job.companyName ?? '',
         }));
 
-        // Step 3: In-memory pre-filter (location + title + date — no HTTP)
+        // Step 3: In-memory pre-filter (location + title only — posting date is a result gate)
         const preFiltered = jobs.filter((job) => {
-            if (!filterJob.matchesLocation(job.location))        return false;
-            if (!filterJob.matchesTitle(job.job_title))          return false;
-            if (!filterJob.matchesPostingDate(job.posting_date)) return false;
+            if (!filterJob.matchesLocation(job.location)) return false;
+            if (!filterJob.matchesTitle(job.job_title))   return false;
             return true;
         });
         logger.info(
             `Pre-filter: ${jobs.length} → ${preFiltered.length} passed ` +
-            `(${jobs.length - preFiltered.length} rejected by location/title/date)`
+            `(${jobs.length - preFiltered.length} rejected by location/title)`
         );
 
         // Step 4: Resolve position_id — fast path (SQLite) or slow path (HTML scrape)
@@ -170,12 +169,15 @@ export const runDiceScraper = async (page = 1, filterJob = defaultFilterJob) => 
                 // ── Fast path: previously scraped, use cached data ──────────
                 const cached = getJob(job.job_link);
                 if (cached) {
+                    touchJob(job.job_link);
                     let { position_id } = cached;
                     // Backfill if cached but position_id was never fetched
                     if (!position_id) {
                         position_id = await fetchPositionId(job.job_link, logger);
                         if (position_id) updateJobPositionId(job.job_link, position_id);
                     }
+                    // Apply posting date as final result gate
+                    if (!filterJob.matchesPostingDate(cached.posting_date)) return;
                     filteredJobs.push({ ...cached, position_id });
                     return;
                 }
@@ -183,6 +185,8 @@ export const runDiceScraper = async (page = 1, filterJob = defaultFilterJob) => 
                 // ── Slow path: new job — scrape detail page, then persist ───
                 const position_id = await fetchPositionId(job.job_link, logger);
                 upsertJob({ ...job, position_id }, 'dice');
+                // Apply posting date as final result gate
+                if (!filterJob.matchesPostingDate(job.posting_date)) return;
                 filteredJobs.push({ ...job, position_id });
             })
         ));
