@@ -19,14 +19,16 @@ const INIT_SQL = `
         posting_date TEXT,
         position_id  TEXT,
         portal       TEXT NOT NULL,
-        scraped_at   TEXT NOT NULL DEFAULT (datetime('now'))
+        scraped_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        last_seen_at TEXT,
+        user_status  TEXT NOT NULL DEFAULT 'new'
     );
 
-    CREATE INDEX IF NOT EXISTS idx_jobs_portal       ON jobs(portal);
-    CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at   ON jobs(scraped_at);
-    CREATE INDEX IF NOT EXISTS idx_jobs_job_id       ON jobs(job_id);
-    CREATE INDEX IF NOT EXISTS idx_jobs_company_name ON jobs(company_name);
-    CREATE INDEX IF NOT EXISTS idx_jobs_composite    ON jobs(portal, scraped_at);
+    CREATE INDEX IF NOT EXISTS idx_jobs_portal        ON jobs(portal);
+    CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at    ON jobs(scraped_at);
+    CREATE INDEX IF NOT EXISTS idx_jobs_job_id        ON jobs(job_id);
+    CREATE INDEX IF NOT EXISTS idx_jobs_company_name  ON jobs(company_name);
+    CREATE INDEX IF NOT EXISTS idx_jobs_composite     ON jobs(portal, scraped_at);
 `;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -57,12 +59,24 @@ export const initDb = () => {
 
     db.exec(INIT_SQL);
 
-    // Migration: add position_id column for existing DBs created before this column existed
+    // Migrations: add columns for existing DBs created before these columns existed
     const cols = db.prepare('PRAGMA table_info(jobs)').all().map((c) => c.name);
     if (!cols.includes('position_id')) {
         db.exec('ALTER TABLE jobs ADD COLUMN position_id TEXT');
         logger.info('Migration: added position_id column to jobs table');
     }
+    if (!cols.includes('last_seen_at')) {
+        db.exec('ALTER TABLE jobs ADD COLUMN last_seen_at TEXT');
+        // Seed from scraped_at so existing rows are not immediately considered stale
+        db.exec('UPDATE jobs SET last_seen_at = scraped_at WHERE last_seen_at IS NULL');
+        logger.info('Migration: added last_seen_at column, seeded from scraped_at');
+    }
+    if (!cols.includes('user_status')) {
+        db.exec("ALTER TABLE jobs ADD COLUMN user_status TEXT NOT NULL DEFAULT 'new'");
+        logger.info('Migration: added user_status column to jobs table');
+    }
+    // Always ensure the index exists (safe after migration or on a fresh DB)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_jobs_last_seen_at ON jobs(last_seen_at)');
 
     logger.info(`SQLite initialised — ${DB_PATH}`);
 };
@@ -76,8 +90,10 @@ export const initDb = () => {
  * @param {number} daysToKeep - Jobs older than this many days are removed (default: 30)
  */
 export const cleanOldJobs = (daysToKeep = 30) => {
+    // Use last_seen_at when available so actively-scraped jobs are never pruned
+    // solely because they were first inserted long ago.
     const result = db.prepare(
-        `DELETE FROM jobs WHERE scraped_at < datetime('now', ? || ' days')`
+        `DELETE FROM jobs WHERE COALESCE(last_seen_at, scraped_at) < datetime('now', ? || ' days')`
     ).run(`-${daysToKeep}`);
 
     // Reclaim freed space incrementally (not a full VACUUM — avoids long locks)
@@ -139,6 +155,17 @@ export const getJobCount = (portal) => {
     return row.count;
 };
 
+/**
+ * Stamps last_seen_at = now on a cached job each time it is confirmed active
+ * by the fast path. This prevents cleanOldJobs from pruning jobs that are
+ * still appearing on job boards, regardless of when they were first inserted.
+ *
+ * @param {string} job_link
+ */
+export const touchJob = (job_link) => {
+    db.prepare("UPDATE jobs SET last_seen_at = datetime('now') WHERE job_link = ?").run(job_link);
+};
+
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 /**
@@ -162,9 +189,9 @@ export const upsertJob = (job, portal) => {
     }
     db.prepare(`
         INSERT OR IGNORE INTO jobs
-            (job_link, job_id, job_title, company_name, location, posting_date, position_id, portal)
+            (job_link, job_id, job_title, company_name, location, posting_date, position_id, portal, last_seen_at)
         VALUES
-            (@job_link, @job_id, @job_title, @company_name, @location, @posting_date, @position_id, @portal)
+            (@job_link, @job_id, @job_title, @company_name, @location, @posting_date, @position_id, @portal, datetime('now'))
     `).run({ portal, position_id: null, ...job });
 };
 
@@ -220,9 +247,9 @@ export const upsertJobs = (jobs, portal) => {
 
     const insert = db.prepare(`
         INSERT OR IGNORE INTO jobs
-            (job_link, job_id, job_title, company_name, location, posting_date, position_id, portal)
+            (job_link, job_id, job_title, company_name, location, posting_date, position_id, portal, last_seen_at)
         VALUES
-            (@job_link, @job_id, @job_title, @company_name, @location, @posting_date, @position_id, @portal)
+            (@job_link, @job_id, @job_title, @company_name, @location, @posting_date, @position_id, @portal, datetime('now'))
     `);
 
     const insertMany = db.transaction((rows) => {
@@ -233,4 +260,18 @@ export const upsertJobs = (jobs, portal) => {
 
     insertMany(jobs);
     logger.info(`[${portal}] upserted ${jobs.length} jobs into SQLite`);
+};
+
+export const queryJobs = () => {
+    return db.prepare(`
+        SELECT job_link, job_id, job_title, company_name, location,
+               posting_date, portal, scraped_at, last_seen_at, user_status
+        FROM jobs
+        WHERE COALESCE(last_seen_at, scraped_at) >= datetime('now', '-30 days')
+        ORDER BY scraped_at DESC
+    `).all();
+};
+
+export const updateJobStatus = (job_link, status) => {
+    db.prepare(`UPDATE jobs SET user_status = ? WHERE job_link = ?`).run(status, job_link);
 };
