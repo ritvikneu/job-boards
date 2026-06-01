@@ -87,15 +87,14 @@ Any key omitted from a profile falls back to the value in `.env`.
 ### Workday (`GET /workday`)
 
 ```json
-// file_name overrides the default workday.json (maps to app/companies/<name>.json)
-{ "file_name": "workday", "profile": "swe-us" }
+// Profile only
+{ "profile": "swe-us" }
 
-// Different company file + tighter date window
-{ "file_name": "wday2", "profile": "new-grad", "filters": { "posting_diff": 3 } }
+// Profile + tighter date window
+{ "profile": "new-grad", "filters": { "posting_diff": 3 } }
 
-// Inline
+// Inline filters
 {
-  "file_name": "wday1",
   "filters": {
     "job_titles": ["software engineer"],
     "countries": ["usa"],

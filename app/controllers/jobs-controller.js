@@ -73,8 +73,7 @@ export const getAsh2 = async (request, response, next) => {
 export const getWorkday = async (request, response, next) => {
     try {
         const filterJob = buildFilterJob(request.body);
-        const file_name = request.body.file_name || 'wday1';
-        const res = await wday.runWorkdayScraper(file_name, filterJob);
+        const res = await wday.runWorkdayScraper('workday', filterJob);
         response.json({ message: res });
     } catch (err) {
         logger.error(`getWorkday failed: ${err.message}`);

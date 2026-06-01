@@ -197,7 +197,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"file_name\": \"wday1\"\n}",
+					"raw": "{}",
 					"options": {
 						"raw": {
 							"language": "json"

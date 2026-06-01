@@ -16,9 +16,7 @@ const filtersSchema = z.object({
 
 // ─── Route-specific schemas ───────────────────────────────────────────────────
 
-const workdayBodySchema = filtersSchema.extend({
-    file_name: z.enum(['wday1', 'wday2', 'wday3']).optional(),
-});
+const workdayBodySchema = filtersSchema;
 
 const diceBodySchema = filtersSchema.extend({
     page_number: z.number().int().min(1).max(100).optional(),

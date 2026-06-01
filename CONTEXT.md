@@ -98,12 +98,12 @@ app/
 │   ├── logger.js                  ← createCustomLogger(name) → Winston (daily rotation,
 │   │                                 14-day retention, gzip, sensitive data redaction)
 │   └── metrics.js                 ← httpMetrics middleware, recordScrapeMetrics(), recordScrapeError()
-├── companies/                     ← company list files per portal
-│   ├── greenhouse/                  ← *.csv  (one slug per line, e.g. "stripe")
-│   ├── lever/                       ← *.csv
-│   ├── ashbyhq/                     ← *.csv
-│   ├── workday/                     ← *.json  [{ "name": "...", "link": "..." }]
-│   └── oracloud/                    ← *.json  [{ "companyName", "url", "jobSearchUrl" }]
+├── companies/                     ← company list files per portal (flat)
+│   ├── greenhouse.csv               ← one slug per line, e.g. "stripe"
+│   ├── lever.csv
+│   ├── ashby.csv
+│   ├── workday.json                 ← [{ "name": "...", "link": "..." }]
+│   └── oracloud.json                ← [{ "companyName", "url", "jobSearchUrl" }]
 ├── config/
 │   └── profiles/                  ← named filter preset JSON files (e.g. swe-us.json)
 ├── data/
@@ -265,7 +265,7 @@ node scripts/apply-cleanup.js [--apply] [--rehome <discovery.csv>]
 
 All three portals' official JSON APIs return clean 200/404 signals, so cleanup-service.js and find-portal.js both standardize on those endpoints. (The live scrapers in `greenhouse-service.js`, `lever-service.js`, `ash-service.js` still hit HTML pages because they need the inline job data — that's a separate concern and not part of the cleanup probe path.)
 
-**Per-portal dedup.** Workday's `wday.json`, `wday1.json`, `wday2.json` overlap; cleanup-service.js dedups by slug across files within a portal so the same company isn't reported twice.
+**Single Workday file.** All Workday companies are consolidated in `workday.json` (merged from the previous `wday.json`, `wday1.json`, `wday2.json`); dedup by slug was applied during the merge.
 
 ### 3f. Filtering logic (`filtering-service.js`)
 
@@ -341,10 +341,6 @@ STATES=california,new york,texas,remote
 STATES_ABBR=ca,ny,tx,remote,us
 POSTING_DIFF=10
 
-# Company files
-FILE_GH=gh-io
-FILE_LEVER=lever
-FILE_ASH=ash
 WORKDAY_OFFSET=200
 
 # Infrastructure

@@ -188,7 +188,7 @@ export const runCleanup = async ({ portals } = {}) => {
     for (const portal of selected) {
         const cfg = PORTALS[portal];
 
-        // Dedup by slug across multiple board files (e.g. Workday's wday/wday1/wday2).
+        // Dedup by slug across board entries.
         const seen    = new Set();
         const entries = cfg.boards
             .flatMap((b) => loadBoard(portal, cfg, b, logger))
