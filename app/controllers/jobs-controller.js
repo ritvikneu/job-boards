@@ -1,5 +1,4 @@
 import * as ghService from "../services/greenhouse-service.js";
-import { runCleanup } from "../services/cleanup-service.js";
 import * as leverService from "../services/lever-service.js";
 import * as ashService from "../services/ash-service.js";
 import * as wday from "../services/wday-rabbit.js";
@@ -33,17 +32,6 @@ export const getGreenhouse = async (request, response, next) => {
         response.json({ message: res });
     } catch (err) {
         logger.error(`getGreenhouse failed: ${err.message}`);
-        next(err);
-    }
-};
-
-export const getCleanup = async (request, response, next) => {
-    try {
-        const portals = request.body?.portals;
-        const result  = await runCleanup({ portals });
-        response.json(result);
-    } catch (err) {
-        logger.error(`getCleanup failed: ${err.message}`);
         next(err);
     }
 };

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { loadCompanies } from './utils.js';
 import axios from 'axios';
 import pLimit from 'p-limit';
 import { config } from 'dotenv';
@@ -31,38 +31,6 @@ const MAX_RETRIES        = 2;
 
 const delay         = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
-
-// ─── Step 1: Load Companies ───────────────────────────────────────────────────
-
-/**
- * Reads a Greenhouse company slugs CSV, deduplicates entries, and returns an
- * array of { name, link } objects ready for scraping. `link` is the API URL
- * for the board (used by both the scraper and cleanup probes).
- *
- * Lines starting with '#' are treated as comments and skipped.
- */
-export const loadCompanies = (fileName, logger) => {
-    const csvFilePath = `app/companies/${fileName}.csv`;
-    logger.info(`Loading companies from: ${csvFilePath}`);
-
-    try {
-        const rows = readFileSync(csvFilePath, 'utf8')
-            .split('\n')
-            .map((row) => row.toLowerCase().trim())
-            .filter((row) => row.length > 0 && !row.startsWith('#'));
-
-        const companies = [...new Set(rows)].map((name) => ({
-            name,
-            link: `${GH_API_BASE_URL}${name}/jobs`,
-        }));
-
-        logger.info(`Companies loaded: ${companies.length}`);
-        return companies;
-    } catch (error) {
-        logger.error(`Failed to load companies CSV: ${error.message}`);
-        throw error;
-    }
-};
 
 // ─── Step 2: Scrape Listing Pages ─────────────────────────────────────────────
 
@@ -220,7 +188,7 @@ export const runGreenhouseScraper = async (filterJob = defaultFilterJob) => {
     logger.info(`=== Greenhouse Scraper Started | ${new Date().toISOString()} ===`);
 
     try {
-        const companies   = loadCompanies(fileName, logger);
+        const companies   = loadCompanies(fileName, (slug) => `${GH_API_BASE_URL}${slug}/jobs`, logger);
         const scrapedJobs = await scrapeAllCompanies(companies, logger);
 
         const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob, portal);

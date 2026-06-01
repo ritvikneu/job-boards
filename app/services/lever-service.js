@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { loadCompanies } from './utils.js';
 import axios from 'axios';
 import pLimit from 'p-limit';
 import { config } from 'dotenv';
@@ -40,28 +40,6 @@ const jitteredDelay = () => RETRY_DELAY_MS + Math.floor(Math.random() * RETRY_JI
 
 // ─── Step 1: Load Companies ───────────────────────────────────────────────────
 
-const loadCompanies = (fileName, logger) => {
-    const csvFilePath = `app/companies/${fileName}.csv`;
-    logger.info(`Loading companies from: ${csvFilePath}`);
-
-    try {
-        const rows = readFileSync(csvFilePath, 'utf8')
-            .split('\n')
-            .map((row) => row.toLowerCase().trim())
-            .filter((row) => row.length > 0 && !row.startsWith('#'));
-
-        const companies = [...new Set(rows)].map((name) => ({
-            name,
-            link: `${LEVER_API_BASE_URL}${name}`,
-        }));
-
-        logger.info(`Companies loaded: ${companies.length}`);
-        return companies;
-    } catch (error) {
-        logger.error(`Failed to load companies CSV: ${error.message}`);
-        throw error;
-    }
-};
 
 // ─── Step 2: Scrape Postings ──────────────────────────────────────────────────
 
@@ -217,7 +195,7 @@ export const runLeverScraper = async (filterJob = defaultFilterJob) => {
     logger.info(`=== Lever Job Scraper Started | ${new Date().toISOString()} ===`);
 
     try {
-        const companies   = loadCompanies(fileName, logger);
+        const companies   = loadCompanies(fileName, (slug) => `${LEVER_API_BASE_URL}${slug}`, logger);
         const scrapedJobs = await scrapeAllCompanies(companies, logger);
 
         const filteredJobs = await filterJobs(scrapedJobs, logger, filterJob);
