@@ -10,9 +10,6 @@ const router = express.Router();
 router.route('/greenhouse')
         .get(scraperLimiter, validateGreenhouse, jobsController.getGreenhouse);
 
-router.route('/cleanup')
-        .post(scraperLimiter, jobsController.getCleanup);
-
 router.route('/lever')
         .get(scraperLimiter, validateFilters, jobsController.getLever);
 

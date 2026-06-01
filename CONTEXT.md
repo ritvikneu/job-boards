@@ -43,17 +43,16 @@
 ```
 HTTP API (Express)        Scrapers                Maintenance (out-of-band)
 ─────────────────         ─────────               ─────────────────────────
-POST /cleanup             greenhouse-service      scripts/find-portal.js
-GET  /greenhouse          lever-service           scripts/apply-cleanup.js
-GET  /lever               ash-service             scripts/validate-companies.js
-GET  /ash                 wday-rabbit             scripts/test-scrapers.js
-GET  /workday             oraclecloud-service
-GET  /oracloud            dice-service
-GET  /dice                                        ↓ reads/writes
+GET  /greenhouse          greenhouse-service      scripts/cleanup.py
+GET  /lever               lever-service           scripts/find_portal.py
+GET  /ash                 ash-service             scripts/test-scrapers.py
+GET  /workday             wday-rabbit
+GET  /oracloud            oraclecloud-service
+GET  /dice                dice-service            ↓ reads/writes
 GET  /latest                                      app/companies/<portal>/*.{csv,json}
 GET  /health
    ↓
-shared: filtering-service, profile-service, sqlite-service, logger, metrics
+shared: filtering-service, profile-service, sqlite-service, utils, logger, metrics
 ```
 
 ### Directory layout
@@ -80,8 +79,7 @@ app/
 │   ├── wday-rabbit.js             ← runWorkdayScraper(file_name, filterJob)
 │   ├── oraclecloud-service.js     ← runOracleCloudScraper(filterJob)
 │   ├── dice-service.js            ← runDiceScraper(page_number, filterJob)
-│   ├── cleanup-service.js         ← runCleanup({portals?}) — probes every company via official
-│   │                                 JSON APIs; flags 403/404 slugs; writes stale CSV report
+│   ├── utils.js                   ← loadCompanies(fileName, buildLink, logger) — shared CSV loader
 │   ├── file_creation-service.js   ← FileHandler: writeToExcel(), getLatestJobs() → email
 │   ├── mail-service.js            ← Mailtrap transport + sendMail/sendMailAttachment
 │   │                                 (path-traversal guard, EMAIL_RECIPIENT from env)
@@ -113,16 +111,16 @@ app/
     └── README.md                  ← pattern reference for adding portals
 
 scripts/                           ← standalone maintenance utilities (not part of the server)
-├── find-portal.js                 ← Given a slug list (from a stale-companies report or text
-│                                     file), probe Greenhouse/Lever/Ashby JSON APIs to discover
-│                                     which portal currently hosts each company. Output:
-│                                     reports/portal-discovery-YYYY-MM-DD.csv
-├── apply-cleanup.js               ← Mutates app/companies/<portal>/*.{csv,json}: removes
-│                                     stale slugs (from stale-companies report) and optionally
-│                                     appends re-homed slugs (from --rehome <discovery.csv>).
-│                                     Dry-run by default; --apply to write.
-├── test-scrapers.js               ← ad-hoc scraper smoke tests
-└── validate-companies.js          ← lints company list files for malformed entries
+├── cleanup.py                     ← Probes every slug via each portal's official JSON API;
+│                                     writes reports/stale-companies-YYYY-MM-DD.csv.
+│                                     --portals to scope; --apply to remove stale slugs from
+│                                     company files; --rehome to append re-homed slugs.
+├── find_portal.py                 ← Given slugs (from stale report, --from-file, or company
+│                                     names via --from-names), probes Greenhouse/Ashby/Lever to
+│                                     find the current portal. Output:
+│                                     reports/portal-discovery-YYYY-MM-DD.csv. --apply appends
+│                                     hits directly to app/companies/<portal>.csv.
+└── test_scrapers.py               ← ad-hoc scraper smoke tests
 
 reports/                           ← gitignored; cleanup + discovery output
 .env.example                       ← documented template of all environment variables
@@ -233,7 +231,7 @@ runWorkdayScraper()
 Each multi-tenant portal (everything except Dice) needs a list of company slugs/IDs in `app/companies/<portal>/`. Companies move ATSes, slugs change, boards go private — leaving stale entries that waste scrape time and produce noise. A three-step pipeline keeps these lists healthy:
 
 ```
-POST /cleanup                  ← identify stale (cleanup-service.js)
+python scripts/cleanup.py [--portals P …] [--apply] [--rehome <discovery.csv>]
   └─ probe every slug via the portal's official JSON API:
         greenhouse → boards-api.greenhouse.io/v1/boards/<slug>/jobs
         lever      → api.lever.co/v0/postings/<slug>
@@ -242,20 +240,19 @@ POST /cleanup                  ← identify stale (cleanup-service.js)
         workday    → POST to company.link with {limit:1, offset:0, searchText:''}
   → reports/stale-companies-YYYY-MM-DD.csv
         category=stale (403/404 — safe to remove)
-        category=unknown (5xx/timeout — inconclusive, re-run that portal alone)
+        category=unknown_transient (408/429/502/503/504/timeout — re-run alone)
+        category=unknown_error (other errors)
+  --apply: also removes stale slugs from company files in the same run
+  --rehome <csv>: also appends re-homed slugs from a discovery report
 
-node scripts/find-portal.js    ← re-home stale slugs to other portals
+python scripts/find_portal.py [--apply] [--from-file FILE] [--from-names FILE]
   └─ for each slug, probe greenhouse + ashby + lever via JSON APIs
         (skips the slug's original portal; first 2xx wins)
   → reports/portal-discovery-YYYY-MM-DD.csv
         slug,original_portal,found_in,found_url,status
         found_in='none' for slugs that didn't match anywhere
-
-node scripts/apply-cleanup.js [--apply] [--rehome <discovery.csv>]
-  └─ remove confirmed-stale (category=stale only) slugs from source files
-  └─ optionally append re-homed slugs to the target portal's CSV (deduped)
-  → mutates app/companies/<portal>/*.{csv,json}
-        (dry-run by default; git diff is the audit trail)
+  --apply: also appends each hit slug to app/companies/<found_in>.csv (deduped)
+  --from-names: accepts company names, generates slug candidates before probing
 ```
 
 **Why we probe APIs, not HTML.** Initial probes used the HTML board URLs (e.g. `jobs.lever.co/<slug>`) and produced wildly wrong results:
@@ -263,7 +260,7 @@ node scripts/apply-cleanup.js [--apply] [--rehome <discovery.csv>]
 - `jobs.ashbyhq.com` is an SPA shell that returns **200 for any slug** — producing false-positives in discovery
 - `jobs.lever.co` returns **404 for live boards** — false-stales
 
-All three portals' official JSON APIs return clean 200/404 signals, so cleanup-service.js and find-portal.js both standardize on those endpoints. (The live scrapers in `greenhouse-service.js`, `lever-service.js`, `ash-service.js` still hit HTML pages because they need the inline job data — that's a separate concern and not part of the cleanup probe path.)
+All three portals' official JSON APIs return clean 200/404 signals, so cleanup.py and find_portal.py both standardize on those endpoints. (The live scrapers in `greenhouse-service.js`, `lever-service.js`, `ash-service.js` still hit HTML pages because they need the inline job data — that's a separate concern and not part of the cleanup probe path.)
 
 **Single Workday file.** All Workday companies are consolidated in `workday.json` (merged from the previous `wday.json`, `wday1.json`, `wday2.json`); dedup by slug was applied during the merge.
 
@@ -542,8 +539,8 @@ When Lever stores a job without `posting_date` (because it failed location/title
 
 | ID | Status | Description |
 |---|---|---|
-| Phase 5g | **Done** | Dead company CSV audit — implemented via `POST /cleanup` + `scripts/apply-cleanup.js`. See section 3e. |
-| GH-slugs | **Done** | Replaced by the cleanup pipeline. `POST /cleanup` reports every 403/404 slug; `scripts/apply-cleanup.js --apply` removes them from CSVs. |
+| Phase 5g | **Done** | Dead company CSV audit — implemented via `scripts/cleanup.py`. See section 3e. |
+| GH-slugs | **Done** | Replaced by the cleanup pipeline. `scripts/cleanup.py --apply` reports and removes every 403/404 slug. |
 | Phase 6 | Pending | Unit tests — `tests/test.js` exists but content is not yet implemented. Plan: mocha + nock (HTTP mocking) + sinon (stubs). |
 | Scheduling | Designed, not built | Recurring cleanup + scrape pipelines designed in [docs/scheduling.md](docs/scheduling.md). Cleanup via GitHub Actions (weekly PR), scrapers via systemd timer on EC2 (daily). |
 | OracleCloud env | Missing | The Oracle Cloud service hardcodes `'oracloud'` as the file name. Should read from `process.env.FILE_ORA` for consistency. |

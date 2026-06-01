@@ -139,22 +139,20 @@ Each portal except Dice is multi-tenant and requires a list of company slugs/IDs
 
 | Tool | What it does |
 |---|---|
-| `POST /cleanup` | Probes every company via each portal's JSON API. Writes `reports/stale-companies-<date>.csv` with `stale` (404/403) and `unknown` (5xx/timeout) rows. Optional `{"portals":[…]}` body. |
-| `node scripts/find-portal.js` | For each slug, probes other portals to see where the company moved (e.g. Greenhouse → Ashby). Writes `reports/portal-discovery-<date>.csv`. |
-| `node scripts/apply-cleanup.js` | Mutates `app/companies/<portal>/*.csv` and `*.json`: removes stale slugs, optionally appends re-homed slugs to the new portal. Dry-run by default — pass `--apply` to write. |
+| `python scripts/cleanup.py` | Probes every company via each portal's JSON API. Writes `reports/stale-companies-<date>.csv` with `stale` (404/403) and `unknown` (5xx/timeout) rows. Pass `--apply` to also remove stale slugs from company files. |
+| `python scripts/find_portal.py` | For each slug, probes other portals to see where the company moved (e.g. Greenhouse → Ashby). Writes `reports/portal-discovery-<date>.csv`. Pass `--apply` to append hits directly to the matching portal CSV. Pass `--from-names FILE` to start from company names instead of slugs. |
 
 **End-to-end workflow:**
 ```bash
-# 1. Identify stale slugs
-curl -sX POST http://localhost:7777/cleanup -H "Content-Type: application/json" -d '{"portals":["greenhouse"]}'
+# 1. Probe + remove stale (per-portal for clean reports)
+for p in greenhouse lever ashby; do
+  python scripts/cleanup.py --portals $p --apply
+done
 
-# 2. Discover re-home matches across other portals
-node scripts/find-portal.js
+# 2. Discover re-home matches and write directly to portal CSVs
+python scripts/find_portal.py --apply
 
-# 3. Apply removals + additions (dry-run first to preview)
-node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-$(date +%F).csv
-
-# 4. Review the diff and commit
+# 3. Review the diff and commit
 git diff app/companies/
 ```
 

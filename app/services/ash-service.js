@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { loadCompanies } from './utils.js';
 import axios from 'axios';
 import jsdom from 'jsdom';
 import { config } from 'dotenv';
@@ -28,68 +28,6 @@ const MAX_RETRIES = 2;
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const formatElapsed = (startMs) => ((Date.now() - startMs) / 1000).toFixed(2);
-
-// ─── Step 1: Load Companies ───────────────────────────────────────────────────
-
-/**
- * Reads a CSV of Ashby company slugs, deduplicates them, and returns an array
- * of { name, link } objects ready for scraping.
- *
- * The CSV is expected to have one slug per line (e.g. "stripe", "openai").
- * Slugs are lowercased and trimmed to avoid URL issues downstream.
- */
-/**
- * {
-                        "id": "850d995e-221c-46cf-bdc0-5c61bf555381",
-                        "title": "Software Support Engineer",
-                        "updatedAt": "2026-02-19T18:14:01.106Z",
-                        "suppressDescriptionOpening": false,
-                        "suppressDescriptionClosing": false,
-                        "departmentId": "780d80e0-d659-47c1-b05a-d9729d6aeef4",
-                        "departmentName": "Engineering",
-                        "departmentExternalName": null,
-                        "locationId": "4d661e75-87bb-4f3f-8a23-f803e925fdc7",
-                        "locationName": "Remote",
-                        "locationExternalName": null,
-                        "workplaceType": "Remote",
-                        "employmentType": "FullTime",
-                        "isListed": true,
-                        "jobId": "0c4a9a34-5b25-431c-b64f-05a5c0f4de5e",
-                        "jobRequisitionId": "100",
-                        "teamId": "780d80e0-d659-47c1-b05a-d9729d6aeef4",
-                        "teamName": "Engineering",
-                        "teamExternalName": null,
-                        "publishedDate": "2025-09-22",
-                        "applicationDeadline": null,
-                        "shouldDisplayCompensationOnJobBoard": true,
-                        "secondaryLocations": [],
-                        "compensationTierSummary": "$90K – $125K",
-                        "userRoles": []
-                    }
- */
-const loadCompanies = (fileName, logger) => {
-    const csvFilePath = `app/companies/${fileName}.csv`;
-    logger.info(`Loading companies from: ${csvFilePath}`);
-
-    try {
-        const rows = readFileSync(csvFilePath, 'utf8')
-            .split('\n')
-            .map((row) => row.toLowerCase().trim())
-            .filter(Boolean);
-
-        // Wrap in a Set to silently drop any duplicate slugs in the CSV
-        const companies = [...new Set(rows)].map((name) => ({
-            name,
-            link: `${ASHBY_BASE_URL}${name}`,
-        }));
-
-        logger.info(`Companies loaded: ${companies.length}`);
-        return companies;
-    } catch (error) {
-        logger.error(`Failed to load companies CSV: ${error.message}`);
-        throw error;
-    }
-};
 
 // ─── Step 2: Scrape Jobs ──────────────────────────────────────────────────────
 
@@ -346,7 +284,7 @@ export const runAshScraper = async (filterJob = defaultFilterJob) => {
     logger.info(`=== AshbyHQ Job Scraper Started | ${new Date().toISOString()} ===`);
 
     try {
-        const companies = loadCompanies(fileName, logger);
+        const companies = loadCompanies(fileName, (slug) => `${ASHBY_BASE_URL}${slug}`, logger);
 
         const scrapedJobs = await scrapeAllCompanies(companies, logger);
 

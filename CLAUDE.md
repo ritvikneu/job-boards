@@ -72,41 +72,39 @@ See `.env.example` for the full list.
 
 ### Cleanup, re-homing, and CSV maintenance
 
-Three tools keep the per-portal company lists healthy. None of them auto-mutates source files unless explicitly run with `--apply`.
+Two tools keep the per-portal company lists healthy. Neither auto-mutates source files unless run with `--apply`.
 
-**`POST /cleanup`** ([app/services/cleanup-service.js](app/services/cleanup-service.js)) — probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday using each portal's **official JSON API** (e.g. `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`). HTML URLs are unreliable (Greenhouse 406s every GET, Ashby SPA returns 200 for any slug, Lever HTML 404s live boards), so we always go through the APIs. Output: `reports/stale-companies-YYYY-MM-DD.csv` with a `category` column — `stale` (404/403, safe to remove) or `unknown` (5xx/timeout/network error). With the API endpoints, `unknown` should be near zero; if it's not, re-run that portal alone. Optional body: `{"portals":["greenhouse","lever"]}` to scope.
-
-**`scripts/find-portal.js`** — for each slug in a stale report (or a plain text file), probes Greenhouse + Ashby + Lever via their JSON APIs to see if the company has moved. Skips the slug's original portal. Output: `reports/portal-discovery-YYYY-MM-DD.csv` mapping `slug → found_in` (or `none`).
+**`scripts/cleanup.py`** — probes every company across Greenhouse, Lever, Ashby, Oracle Cloud, and Workday using each portal's **official JSON API** (e.g. `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`). HTML URLs are unreliable (Greenhouse 406s every GET, Ashby SPA returns 200 for any slug, Lever HTML 404s live boards), so we always go through the APIs. Output: `reports/stale-companies-YYYY-MM-DD.csv` with a `category` column — `stale` (404/403, safe to remove) or `unknown` (5xx/timeout/network error). With `--apply`, also removes stale slugs from company files in the same run. Run one portal at a time to avoid rate limits.
 
 ```bash
-node scripts/find-portal.js                          # uses today's stale-companies report
-node scripts/find-portal.js --report path/to.csv     # specific report
-node scripts/find-portal.js --from-file slugs.txt    # bare slug list, one per line
+python scripts/cleanup.py --portals ashby               # probe only (dry-run)
+python scripts/cleanup.py --portals ashby --apply       # probe + remove stale
+python scripts/cleanup.py --date 2026-05-31 --apply     # skip probe, apply from existing report
+python scripts/cleanup.py --apply --rehome reports/portal-discovery-YYYY-MM-DD.csv
 ```
 
-**`scripts/apply-cleanup.js`** — mutates `app/companies/<portal>/*.csv` and `*.json`: removes confirmed-stale slugs and (optionally) appends re-homed slugs to the target portal's CSV. Dry-run by default; `--apply` writes. Git is the audit trail — review `git diff app/companies/` before committing.
+**`scripts/find_portal.py`** — for each slug in a stale report (or a plain text file), probes Greenhouse + Ashby + Lever via their JSON APIs to see if the company has moved. Skips the slug's original portal. Output: `reports/portal-discovery-YYYY-MM-DD.csv` mapping `slug → found_in` (or `none`). Pass `--apply` to immediately append discovered slugs to the matching portal CSV in `app/companies/` (deduped).
 
 ```bash
-node scripts/apply-cleanup.js                                          # dry-run
-node scripts/apply-cleanup.js --apply                                  # remove stale
-node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-YYYY-MM-DD.csv
+python scripts/find_portal.py                                # uses today's stale-companies report
+python scripts/find_portal.py --report path/to.csv           # specific report
+python scripts/find_portal.py --from-file slugs.txt          # bare slug list, one per line
+python scripts/find_portal.py --from-file slugs.txt --apply  # also append hits to portal CSVs
 ```
 
 **End-to-end workflow:**
 
 ```bash
-# 1. Identify stale (per-portal for clean reports)
+# 1. Probe + remove stale (per-portal for clean reports)
 for p in greenhouse lever ashby; do
-  curl -sX POST http://localhost:7777/cleanup -H "Content-Type: application/json" -d "{\"portals\":[\"$p\"]}"
-  mv reports/stale-companies-*.csv reports/stale-$p-$(date +%F).csv
+  python scripts/cleanup.py --portals $p --apply
 done
-# (optional) consolidate the per-portal reports into one stale-companies-<date>.csv
 
-# 2. Discover where stale slugs live now
-node scripts/find-portal.js
+# 2. Discover where stale slugs live now (--apply writes directly to portal CSVs)
+python scripts/find_portal.py --apply
 
-# 3. Apply both removals and re-home additions
-node scripts/apply-cleanup.js --apply --rehome reports/portal-discovery-$(date +%F).csv
+# 3. Re-home: add slugs found on new portals (if not using find_portal.py --apply above)
+python scripts/cleanup.py --date $(date +%F) --apply --rehome reports/portal-discovery-$(date +%F).csv
 
 # 4. Review and commit
 git diff app/companies/
