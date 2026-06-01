@@ -1,102 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Portal</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        .job-container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ccc;
-        }
-        th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-        td:first-child {
-            width: 30%;
-        }
-        .job-title {
-            font-weight: bold;
-        }
-        .job-location {
-            color: #666;
-        }
-        .job-posted {
-            font-size: 12px;
-            color: #999;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Board</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div class="job-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Company Name</th>
-                    <th>Job ID</th>
-                    <th>Title</th>
-                    <th>Location</th>
-                    <th>Posting Date</th>
-                </tr>
-            </thead>
-            <tbody id="jobContainer">
-                <!-- Jobs will be dynamically added here -->
-            </tbody>
-        </table>
+
+  <div class="topbar">
+    <div class="topbar-brand">Job Board</div>
+    <div class="topbar-stats">
+      <span><span id="stat-new" class="highlight">—</span> new</span>
+      <span><span id="stat-total" class="highlight">—</span> total</span>
+    </div>
+    <div class="spacer"></div>
+    <div id="last-scraped" class="topbar-date"></div>
+  </div>
+
+  <div class="toolbar">
+    <input id="search" class="search-box" type="search" placeholder="Search title or company...">
+
+    <div class="divider"></div>
+
+    <div class="pill-group">
+      <button class="pill active" data-portal="all">All portals</button>
+      <button class="pill" data-portal="ashby">Ashby</button>
+      <button class="pill" data-portal="greenhouse">Greenhouse</button>
+      <button class="pill" data-portal="lever">Lever</button>
+      <button class="pill" data-portal="oracloud">Oracle</button>
+      <button class="pill" data-portal="dice">Dice</button>
+      <button class="pill" data-portal="workday">Workday</button>
     </div>
 
-    <script>
-        // Sample data array (replace with actual data)
-        const jobs = [
-            { company: "Company A", jobId: "001", title: "Frontend Developer", location: "New York", datePosted: "2024-06-08" },
-            { company: "Company B", jobId: "002", title: "Backend Developer", location: "San Francisco", datePosted: "2024-06-07" },
-            { company: "Company C", jobId: "003", title: "UI/UX Designer", location: "London", datePosted: "2024-06-06" }
-            // Add more job objects as needed
-        ];
+    <div class="divider"></div>
 
-        // Function to render jobs
-        function renderJobs() {
-            const jobContainer = document.getElementById('jobContainer');
-            jobContainer.innerHTML = '';
+    <div class="pill-group">
+      <button class="pill active" data-status-filter="all">All</button>
+      <button class="pill pill-new" data-status-filter="new">New</button>
+      <button class="pill pill-interested" data-status-filter="interested">Interested</button>
+      <button class="pill pill-applied" data-status-filter="applied">Applied</button>
+      <button class="pill pill-saved" data-status-filter="saved">Saved</button>
+      <button class="pill pill-rejected" data-status-filter="rejected">Rejected</button>
+    </div>
 
-            jobs.forEach(job => {
-                const jobRow = document.createElement('tr');
-                jobRow.innerHTML = `
-                    <td>${job.company}</td>
-                    <td>${job.jobId}</td>
-                    <td class="job-title">${job.title}</td>
-                    <td class="job-location">${job.location}</td>
-                    <td class="job-posted">${job.datePosted}</td>
-                `;
-                jobRow.addEventListener('click', () => {
-                    // Navigate to job link here (you can add this functionality)
-                    console.log(`Navigate to job link for ${job.title}`);
-                });
-                jobContainer.appendChild(jobRow);
-            });
-        }
+    <select id="sort" class="sort-select">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="company">Company A–Z</option>
+    </select>
+  </div>
 
-        // Initial rendering
-        renderJobs();
-    </script>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Title</th>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Portal</th>
+          <th>Posted</th>
+        </tr>
+      </thead>
+      <tbody id="job-rows">
+        <tr><td colspan="6" class="loading">Loading jobs...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="/app.js"></script>
 </body>
 </html>
