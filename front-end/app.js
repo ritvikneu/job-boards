@@ -1,4 +1,4 @@
-const CYCLE        = ['new', 'interested', 'applied', 'saved', 'rejected'];
+const STATUSES     = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
@@ -79,21 +79,23 @@ function renderTable(jobs) {
         return;
     }
     tbody.innerHTML = jobs.map(renderRow).join('');
-    tbody.querySelectorAll('.status-badge').forEach((el) => {
-        el.addEventListener('click', handleStatusClick);
+    tbody.querySelectorAll('.status-select').forEach((el) => {
+        el.addEventListener('change', handleStatusChange);
     });
 }
 
 function renderRow(job) {
     const isNew = job.user_status === 'new';
+    const opts  = STATUSES.map((s) =>
+        `<option value="${s}"${job.user_status === s ? ' selected' : ''}>${STATUS_LABEL[s]}</option>`
+    ).join('');
     return `
 <tr class="${isNew ? 'is-new' : ''}">
   <td>
-    <span class="status-badge badge-${escapeAttr(job.user_status)}"
-          data-link="${escapeAttr(job.job_link)}"
-          data-status="${escapeAttr(job.user_status)}">
-      <span class="dot"></span>${escapeHtml(STATUS_LABEL[job.user_status] || job.user_status)}
-    </span>
+    <select class="status-select" data-status="${escapeAttr(job.user_status)}"
+            data-link="${escapeAttr(job.job_link)}">
+      ${opts}
+    </select>
   </td>
   <td>
     <a class="job-title-link" href="${escapeAttr(job.job_link)}" target="_blank" rel="noopener noreferrer">
@@ -106,16 +108,15 @@ function renderRow(job) {
 </tr>`;
 }
 
-// ── Status cycling ────────────────────────────────────────────────────────────
+// ── Status change ─────────────────────────────────────────────────────────────
 
-async function handleStatusClick(e) {
+async function handleStatusChange(e) {
     const el         = e.currentTarget;
     const jobLink    = el.dataset.link;
     const prevStatus = el.dataset.status;
-    const nextStatus = CYCLE[(CYCLE.indexOf(prevStatus) + 1) % CYCLE.length];
+    const nextStatus = el.value;
 
-    // Optimistic update
-    applyBadge(el, nextStatus);
+    el.dataset.status = nextStatus;
     const row = el.closest('tr');
     row.classList.toggle('is-new', nextStatus === 'new');
     const job = allJobs.find((j) => j.job_link === jobLink);
@@ -130,18 +131,12 @@ async function handleStatusClick(e) {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
-        // Revert on failure
-        applyBadge(el, prevStatus);
+        el.value          = prevStatus;
+        el.dataset.status = prevStatus;
         row.classList.toggle('is-new', prevStatus === 'new');
         if (job) job.user_status = prevStatus;
         updateStats();
     }
-}
-
-function applyBadge(el, status) {
-    el.dataset.status = status;
-    el.className      = `status-badge badge-${status}`;
-    el.innerHTML      = `<span class="dot"></span>${escapeHtml(STATUS_LABEL[status] || status)}`;
 }
 
 // ── Filter wiring ─────────────────────────────────────────────────────────────

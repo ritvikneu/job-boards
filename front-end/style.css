@@ -98,34 +98,29 @@ tbody tr.is-new { border-left: 3px solid #3b82f6; }
 
 tbody td { padding: 9px 12px; vertical-align: middle; }
 
-/* ── Status badges ───────────────────────────────────────────────────────── */
+/* ── Status select ───────────────────────────────────────────────────────── */
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+.status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
   border-radius: 20px;
+  padding: 3px 22px 3px 10px;
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
-  border: none;
-  user-select: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 8px;
+  min-width: 110px;
 }
-.status-badge:hover { opacity: 0.8; }
-.status-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-
-.badge-new        { background: #eff6ff; color: #2563eb; }
-.badge-new .dot   { background: #3b82f6; }
-.badge-interested        { background: #fef9c3; color: #92400e; }
-.badge-interested .dot   { background: #f59e0b; }
-.badge-applied        { background: #dcfce7; color: #15803d; }
-.badge-applied .dot   { background: #22c55e; }
-.badge-saved        { background: #f3e8ff; color: #7e22ce; }
-.badge-saved .dot   { background: #a855f7; }
-.badge-rejected        { background: #fee2e2; color: #991b1b; }
-.badge-rejected .dot   { background: #ef4444; }
+.status-select[data-status="new"]        { background-color: #eff6ff; color: #2563eb; }
+.status-select[data-status="interested"] { background-color: #fef9c3; color: #92400e; }
+.status-select[data-status="applied"]    { background-color: #dcfce7; color: #15803d; }
+.status-select[data-status="saved"]      { background-color: #f3e8ff; color: #7e22ce; }
+.status-select[data-status="rejected"]   { background-color: #fee2e2; color: #991b1b; }
+.status-select:focus { outline: 2px solid #93c5fd; outline-offset: 1px; }
 
 /* ── Table cells ─────────────────────────────────────────────────────────── */
 
