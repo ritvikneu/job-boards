@@ -2,7 +2,7 @@ const STATUSES     = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
-let filters = { search: '', status: 'all', sortCol: 'scraped_at', sortDir: 'desc', days: 0 };
+let filters = { search: '', status: 'all', sortCol: 'posting_date', sortDir: 'desc', days: 0 };
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -126,6 +126,8 @@ async function handleStatusChange(e) {
     const jobLink    = el.dataset.link;
     const prevStatus = el.dataset.status;
     const nextStatus = el.value;
+
+    if (nextStatus === prevStatus) return;
 
     el.dataset.status = nextStatus;
     el.disabled       = true;
