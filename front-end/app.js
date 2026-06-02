@@ -25,7 +25,7 @@ async function init() {
 // ── Filtering + sorting ───────────────────────────────────────────────────────
 
 function applyFilters() {
-    const { search, status } = filters;
+    const { search, status, sortCol, sortDir } = filters;
     return allJobs
         .filter((j) => {
             if (search &&
@@ -35,10 +35,11 @@ function applyFilters() {
             return true;
         })
         .sort((a, b) => {
-            const av = String(a[filters.sortCol] ?? '').toLowerCase();
-            const bv = String(b[filters.sortCol] ?? '').toLowerCase();
+            // date fields (posting_date, scraped_at) are ISO strings — lex order = chron order
+            const av = String(a[sortCol] ?? '').toLowerCase();
+            const bv = String(b[sortCol] ?? '').toLowerCase();
             const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-            return filters.sortDir === 'asc' ? cmp : -cmp;
+            return sortDir === 'asc' ? cmp : -cmp;
         });
 }
 
