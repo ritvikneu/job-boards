@@ -67,6 +67,15 @@ body {
 .pill.pill-saved.active      { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
 .pill.pill-rejected.active   { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 .divider { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
+.filter-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+}
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
 

@@ -2,7 +2,7 @@ const STATUSES     = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
-let filters = { search: '', status: 'all', sortCol: 'scraped_at', sortDir: 'desc' };
+let filters = { search: '', status: 'all', sortCol: 'scraped_at', sortDir: 'desc', days: 0 };
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -25,13 +25,21 @@ async function init() {
 // ── Filtering + sorting ───────────────────────────────────────────────────────
 
 function applyFilters() {
-    const { search, status, sortCol, sortDir } = filters;
+    const { search, status, sortCol, sortDir, days } = filters;
+    const cutoff = days > 0
+        ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+        : null;
+
     return allJobs
         .filter((j) => {
             if (search &&
                 !j.job_title.toLowerCase().includes(search) &&
                 !j.company_name.toLowerCase().includes(search)) return false;
             if (status !== 'all' && j.user_status !== status) return false;
+            if (cutoff) {
+                const d = (j.posting_date || j.scraped_at || '').slice(0, 10);
+                if (!d || d < cutoff) return false;
+            }
             return true;
         })
         .sort((a, b) => {
@@ -179,6 +187,12 @@ function wireFilters() {
             syncSortHeaders();
             renderTable(applyFilters());
         });
+    });
+
+    // Date range
+    document.getElementById('date-range').addEventListener('change', (e) => {
+        filters.days = Number(e.target.value);
+        renderTable(applyFilters());
     });
 }
 
