@@ -87,7 +87,7 @@ function renderTable(jobs) {
 function renderRow(job) {
     const isNew = job.user_status === 'new';
     const opts  = STATUSES.map((s) =>
-        `<option value="${s}"${job.user_status === s ? ' selected' : ''}>${STATUS_LABEL[s]}</option>`
+        `<option value="${escapeAttr(s)}"${job.user_status === s ? ' selected' : ''}>${escapeHtml(STATUS_LABEL[s])}</option>`
     ).join('');
     return `
 <tr class="${isNew ? 'is-new' : ''}">
@@ -117,6 +117,7 @@ async function handleStatusChange(e) {
     const nextStatus = el.value;
 
     el.dataset.status = nextStatus;
+    el.disabled       = true;
     const row = el.closest('tr');
     row.classList.toggle('is-new', nextStatus === 'new');
     const job = allJobs.find((j) => j.job_link === jobLink);
@@ -136,6 +137,8 @@ async function handleStatusChange(e) {
         row.classList.toggle('is-new', prevStatus === 'new');
         if (job) job.user_status = prevStatus;
         updateStats();
+    } finally {
+        el.disabled = false;
     }
 }
 
