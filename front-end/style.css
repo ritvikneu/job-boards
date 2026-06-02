@@ -24,6 +24,7 @@ body {
 .topbar-stats .highlight { color: #38bdf8; font-weight: 600; }
 .spacer { flex: 1; }
 .topbar-date { color: #64748b; font-size: 12px; }
+.row-count-badge { color: #64748b; font-size: 11px; }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 
@@ -84,6 +85,9 @@ body {
 table { width: 100%; border-collapse: collapse; background: white; }
 
 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   text-align: left;
   padding: 8px 12px;
   font-size: 11px;

@@ -82,6 +82,9 @@ function updateStats() {
 
 function renderTable(jobs) {
     const tbody = document.getElementById('job-rows');
+    const rc    = document.getElementById('row-count');
+    if (rc) rc.textContent = jobs.length < allJobs.length ? `${jobs.length} shown` : '';
+
     if (jobs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty">No jobs match the current filters.</td></tr>';
         return;
