@@ -2,7 +2,7 @@ const CYCLE        = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
-let filters = { search: '', portal: 'all', status: 'all', sort: 'newest' };
+let filters = { search: '', status: 'all', sort: 'newest' };
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -13,7 +13,7 @@ async function init() {
         allJobs = await res.json();
     } catch (err) {
         document.getElementById('job-rows').innerHTML =
-            `<tr><td colspan="6" class="empty">Failed to load jobs: ${escapeHtml(err.message)}</td></tr>`;
+            `<tr><td colspan="5" class="empty">Failed to load jobs: ${escapeHtml(err.message)}</td></tr>`;
         return;
     }
     updateStats();
@@ -24,13 +24,12 @@ async function init() {
 // ── Filtering + sorting ───────────────────────────────────────────────────────
 
 function applyFilters() {
-    const { search, portal, status, sort } = filters;
+    const { search, status, sort } = filters;
     return allJobs
         .filter((j) => {
             if (search &&
                 !j.job_title.toLowerCase().includes(search) &&
                 !j.company_name.toLowerCase().includes(search)) return false;
-            if (portal !== 'all' && j.portal !== portal) return false;
             if (status !== 'all' && j.user_status !== status) return false;
             return true;
         })
@@ -60,7 +59,7 @@ function updateStats() {
 function renderTable(jobs) {
     const tbody = document.getElementById('job-rows');
     if (jobs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No jobs match the current filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No jobs match the current filters.</td></tr>';
         return;
     }
     tbody.innerHTML = jobs.map(renderRow).join('');
@@ -87,7 +86,6 @@ function renderRow(job) {
   </td>
   <td class="company">${escapeHtml(job.company_name)}</td>
   <td class="location">${escapeHtml(job.location || '')}</td>
-  <td><span class="portal-badge ${escapeAttr(job.portal)}">${escapeHtml(job.portal)}</span></td>
   <td class="date ${isToday(job.posting_date) ? 'today' : ''}">${escapeHtml(formatDate(job.posting_date))}</td>
 </tr>`;
 }
@@ -141,17 +139,6 @@ function wireFilters() {
             filters.search = e.target.value.toLowerCase();
             renderTable(applyFilters());
         }, 200);
-    });
-
-    // Portal pills
-    document.querySelectorAll('[data-portal]').forEach((el) => {
-        el.addEventListener('click', () => {
-            filters.portal = el.dataset.portal;
-            document.querySelectorAll('[data-portal]').forEach((p) => {
-                p.classList.toggle('active', p === el);
-            });
-            renderTable(applyFilters());
-        });
     });
 
     // Status pills

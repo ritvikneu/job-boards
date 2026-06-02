@@ -143,22 +143,6 @@ tbody td { padding: 9px 12px; vertical-align: middle; }
 .company { color: #475569; }
 .location { color: #64748b; font-size: 12px; }
 
-.portal-badge {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  background: #f1f5f9;
-  color: #475569;
-}
-.portal-badge.ashby      { background: #ecfdf5; color: #065f46; }
-.portal-badge.greenhouse { background: #eff6ff; color: #1e40af; }
-.portal-badge.lever      { background: #fff7ed; color: #9a3412; }
-.portal-badge.oracloud   { background: #fdf4ff; color: #6b21a8; }
-.portal-badge.dice       { background: #fef2f2; color: #991b1b; }
-.portal-badge.workday    { background: #f0fdf4; color: #166534; }
-
 .date { color: #94a3b8; font-size: 12px; white-space: nowrap; }
 .date.today { color: #16a34a; font-weight: 600; }
 
