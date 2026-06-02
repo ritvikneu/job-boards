@@ -2,7 +2,7 @@ const CYCLE        = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
-let filters = { search: '', status: 'all', sort: 'newest' };
+let filters = { search: '', status: 'all', sortCol: 'scraped_at', sortDir: 'desc' };
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -19,12 +19,13 @@ async function init() {
     updateStats();
     renderTable(applyFilters());
     wireFilters();
+    syncSortHeaders();
 }
 
 // ── Filtering + sorting ───────────────────────────────────────────────────────
 
 function applyFilters() {
-    const { search, status, sort } = filters;
+    const { search, status } = filters;
     return allJobs
         .filter((j) => {
             if (search &&
@@ -34,10 +35,24 @@ function applyFilters() {
             return true;
         })
         .sort((a, b) => {
-            if (sort === 'oldest')  return new Date(a.scraped_at) - new Date(b.scraped_at);
-            if (sort === 'company') return a.company_name.localeCompare(b.company_name);
-            return new Date(b.scraped_at) - new Date(a.scraped_at);
+            const av = String(a[filters.sortCol] ?? '').toLowerCase();
+            const bv = String(b[filters.sortCol] ?? '').toLowerCase();
+            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+            return filters.sortDir === 'asc' ? cmp : -cmp;
         });
+}
+
+function syncSortHeaders() {
+    document.querySelectorAll('th[data-col]').forEach((th) => {
+        const icon = th.querySelector('.sort-icon');
+        if (th.dataset.col === filters.sortCol) {
+            th.dataset.sortDir = filters.sortDir;
+            icon.textContent   = filters.sortDir === 'asc' ? '▲' : '▼';
+        } else {
+            delete th.dataset.sortDir;
+            icon.textContent = '';
+        }
+    });
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -152,10 +167,19 @@ function wireFilters() {
         });
     });
 
-    // Sort
-    document.getElementById('sort').addEventListener('change', (e) => {
-        filters.sort = e.target.value;
-        renderTable(applyFilters());
+    // Column sort
+    document.querySelectorAll('th[data-col]').forEach((th) => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (filters.sortCol === col) {
+                filters.sortDir = filters.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                filters.sortCol = col;
+                filters.sortDir = 'asc';
+            }
+            syncSortHeaders();
+            renderTable(applyFilters());
+        });
     });
 }
 

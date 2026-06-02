@@ -32,11 +32,6 @@
       <button class="pill pill-rejected" data-status-filter="rejected">Rejected</button>
     </div>
 
-    <select id="sort" class="sort-select">
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-      <option value="company">Company A–Z</option>
-    </select>
   </div>
 
   <div class="table-wrap">
@@ -44,10 +39,10 @@
       <thead>
         <tr>
           <th>Status</th>
-          <th>Title</th>
-          <th>Company</th>
-          <th>Location</th>
-          <th>Posted</th>
+          <th class="sortable" data-col="job_title">Title <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="company_name">Company <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="location">Location <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="posting_date">Posted <span class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="job-rows">
