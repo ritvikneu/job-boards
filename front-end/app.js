@@ -1,8 +1,8 @@
-const CYCLE        = ['new', 'interested', 'applied', 'saved', 'rejected'];
+const STATUSES     = ['new', 'interested', 'applied', 'saved', 'rejected'];
 const STATUS_LABEL = { new: 'New', interested: 'Interested', applied: 'Applied', saved: 'Saved', rejected: 'Rejected' };
 
 let allJobs = [];
-let filters = { search: '', portal: 'all', status: 'all', sort: 'newest' };
+let filters = { search: '', status: 'all', sortCol: 'posting_date', sortDir: 'desc', days: 0 };
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
@@ -13,32 +13,55 @@ async function init() {
         allJobs = await res.json();
     } catch (err) {
         document.getElementById('job-rows').innerHTML =
-            `<tr><td colspan="6" class="empty">Failed to load jobs: ${escapeHtml(err.message)}</td></tr>`;
+            `<tr><td colspan="5" class="empty">Failed to load jobs: ${escapeHtml(err.message)}</td></tr>`;
         return;
     }
     updateStats();
     renderTable(applyFilters());
     wireFilters();
+    syncSortHeaders();
 }
 
 // ── Filtering + sorting ───────────────────────────────────────────────────────
 
 function applyFilters() {
-    const { search, portal, status, sort } = filters;
+    const { search, status, sortCol, sortDir, days } = filters;
+    const cutoff = days > 0
+        ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+        : null;
+
     return allJobs
         .filter((j) => {
             if (search &&
                 !j.job_title.toLowerCase().includes(search) &&
                 !j.company_name.toLowerCase().includes(search)) return false;
-            if (portal !== 'all' && j.portal !== portal) return false;
             if (status !== 'all' && j.user_status !== status) return false;
+            if (cutoff) {
+                const d = (j.posting_date || j.scraped_at || '').slice(0, 10);
+                if (!d || d < cutoff) return false;
+            }
             return true;
         })
         .sort((a, b) => {
-            if (sort === 'oldest')  return new Date(a.scraped_at) - new Date(b.scraped_at);
-            if (sort === 'company') return a.company_name.localeCompare(b.company_name);
-            return new Date(b.scraped_at) - new Date(a.scraped_at);
+            // date fields (posting_date, scraped_at) are ISO strings — lex order = chron order
+            const av = String(a[sortCol] ?? '').toLowerCase();
+            const bv = String(b[sortCol] ?? '').toLowerCase();
+            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+            return sortDir === 'asc' ? cmp : -cmp;
         });
+}
+
+function syncSortHeaders() {
+    document.querySelectorAll('th[data-col]').forEach((th) => {
+        const icon = th.querySelector('.sort-icon');
+        if (th.dataset.col === filters.sortCol) {
+            th.dataset.sortDir = filters.sortDir;
+            icon.textContent   = filters.sortDir === 'asc' ? '▲' : '▼';
+        } else {
+            delete th.dataset.sortDir;
+            icon.textContent = '';
+        }
+    });
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -59,49 +82,55 @@ function updateStats() {
 
 function renderTable(jobs) {
     const tbody = document.getElementById('job-rows');
+    const rc    = document.getElementById('row-count');
+    if (rc) rc.textContent = jobs.length < allJobs.length ? `${jobs.length} shown` : '';
+
     if (jobs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No jobs match the current filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">No jobs match the current filters.</td></tr>';
         return;
     }
     tbody.innerHTML = jobs.map(renderRow).join('');
-    tbody.querySelectorAll('.status-badge').forEach((el) => {
-        el.addEventListener('click', handleStatusClick);
+    tbody.querySelectorAll('.status-select').forEach((el) => {
+        el.addEventListener('change', handleStatusChange);
     });
 }
 
 function renderRow(job) {
     const isNew = job.user_status === 'new';
+    const opts  = STATUSES.map((s) =>
+        `<option value="${escapeAttr(s)}"${job.user_status === s ? ' selected' : ''}>${escapeHtml(STATUS_LABEL[s])}</option>`
+    ).join('');
     return `
 <tr class="${isNew ? 'is-new' : ''}">
-  <td>
-    <span class="status-badge badge-${escapeAttr(job.user_status)}"
-          data-link="${escapeAttr(job.job_link)}"
-          data-status="${escapeAttr(job.user_status)}">
-      <span class="dot"></span>${escapeHtml(STATUS_LABEL[job.user_status] || job.user_status)}
-    </span>
+  <td data-label="Status">
+    <select class="status-select" data-status="${escapeAttr(job.user_status)}"
+            data-link="${escapeAttr(job.job_link)}">
+      ${opts}
+    </select>
   </td>
-  <td>
+  <td data-label="Title">
     <a class="job-title-link" href="${escapeAttr(job.job_link)}" target="_blank" rel="noopener noreferrer">
       ${escapeHtml(job.job_title)}
     </a>
   </td>
-  <td class="company">${escapeHtml(job.company_name)}</td>
-  <td class="location">${escapeHtml(job.location || '')}</td>
-  <td><span class="portal-badge ${escapeAttr(job.portal)}">${escapeHtml(job.portal)}</span></td>
-  <td class="date ${isToday(job.posting_date) ? 'today' : ''}">${escapeHtml(formatDate(job.posting_date))}</td>
+  <td data-label="Company" class="company">${escapeHtml(job.company_name)}</td>
+  <td data-label="Location" class="location">${escapeHtml(job.location || '')}</td>
+  <td data-label="Posted" class="date ${isToday(job.posting_date) ? 'today' : ''}">${escapeHtml(formatDate(job.posting_date))}</td>
 </tr>`;
 }
 
-// ── Status cycling ────────────────────────────────────────────────────────────
+// ── Status change ─────────────────────────────────────────────────────────────
 
-async function handleStatusClick(e) {
+async function handleStatusChange(e) {
     const el         = e.currentTarget;
     const jobLink    = el.dataset.link;
     const prevStatus = el.dataset.status;
-    const nextStatus = CYCLE[(CYCLE.indexOf(prevStatus) + 1) % CYCLE.length];
+    const nextStatus = el.value;
 
-    // Optimistic update
-    applyBadge(el, nextStatus);
+    if (nextStatus === prevStatus) return;
+
+    el.dataset.status = nextStatus;
+    el.disabled       = true;
     const row = el.closest('tr');
     row.classList.toggle('is-new', nextStatus === 'new');
     const job = allJobs.find((j) => j.job_link === jobLink);
@@ -116,18 +145,14 @@ async function handleStatusClick(e) {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch {
-        // Revert on failure
-        applyBadge(el, prevStatus);
+        el.value          = prevStatus;
+        el.dataset.status = prevStatus;
         row.classList.toggle('is-new', prevStatus === 'new');
         if (job) job.user_status = prevStatus;
         updateStats();
+    } finally {
+        el.disabled = false;
     }
-}
-
-function applyBadge(el, status) {
-    el.dataset.status = status;
-    el.className      = `status-badge badge-${status}`;
-    el.innerHTML      = `<span class="dot"></span>${escapeHtml(STATUS_LABEL[status] || status)}`;
 }
 
 // ── Filter wiring ─────────────────────────────────────────────────────────────
@@ -143,17 +168,6 @@ function wireFilters() {
         }, 200);
     });
 
-    // Portal pills
-    document.querySelectorAll('[data-portal]').forEach((el) => {
-        el.addEventListener('click', () => {
-            filters.portal = el.dataset.portal;
-            document.querySelectorAll('[data-portal]').forEach((p) => {
-                p.classList.toggle('active', p === el);
-            });
-            renderTable(applyFilters());
-        });
-    });
-
     // Status pills
     document.querySelectorAll('[data-status-filter]').forEach((el) => {
         el.addEventListener('click', () => {
@@ -165,9 +179,24 @@ function wireFilters() {
         });
     });
 
-    // Sort
-    document.getElementById('sort').addEventListener('change', (e) => {
-        filters.sort = e.target.value;
+    // Column sort
+    document.querySelectorAll('th[data-col]').forEach((th) => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (filters.sortCol === col) {
+                filters.sortDir = filters.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                filters.sortCol = col;
+                filters.sortDir = 'asc';
+            }
+            syncSortHeaders();
+            renderTable(applyFilters());
+        });
+    });
+
+    // Date range
+    document.getElementById('date-range').addEventListener('change', (e) => {
+        filters.days = Number(e.target.value);
         renderTable(applyFilters());
     });
 }

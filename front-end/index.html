@@ -13,6 +13,7 @@
     <div class="topbar-stats">
       <span><span id="stat-new" class="highlight">—</span> new</span>
       <span><span id="stat-total" class="highlight">—</span> total</span>
+      <span id="row-count" class="row-count-badge"></span>
     </div>
     <div class="spacer"></div>
     <div id="last-scraped" class="topbar-date"></div>
@@ -20,18 +21,6 @@
 
   <div class="toolbar">
     <input id="search" class="search-box" type="search" placeholder="Search title or company...">
-
-    <div class="divider"></div>
-
-    <div class="pill-group">
-      <button class="pill active" data-portal="all">All portals</button>
-      <button class="pill" data-portal="ashby">Ashby</button>
-      <button class="pill" data-portal="greenhouse">Greenhouse</button>
-      <button class="pill" data-portal="lever">Lever</button>
-      <button class="pill" data-portal="oracloud">Oracle</button>
-      <button class="pill" data-portal="dice">Dice</button>
-      <button class="pill" data-portal="workday">Workday</button>
-    </div>
 
     <div class="divider"></div>
 
@@ -44,11 +33,16 @@
       <button class="pill pill-rejected" data-status-filter="rejected">Rejected</button>
     </div>
 
-    <select id="sort" class="sort-select">
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-      <option value="company">Company A–Z</option>
+    <div class="divider"></div>
+
+    <select id="date-range" class="filter-select">
+      <option value="0">All time</option>
+      <option value="2">Last 2 days</option>
+      <option value="3">Last 3 days</option>
+      <option value="7">Last 7 days</option>
+      <option value="14">Last 14 days</option>
     </select>
+
   </div>
 
   <div class="table-wrap">
@@ -56,15 +50,14 @@
       <thead>
         <tr>
           <th>Status</th>
-          <th>Title</th>
-          <th>Company</th>
-          <th>Location</th>
-          <th>Portal</th>
-          <th>Posted</th>
+          <th class="sortable" data-col="job_title">Title <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="company_name">Company <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="location">Location <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="posting_date">Posted <span class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody id="job-rows">
-        <tr><td colspan="6" class="loading">Loading jobs...</td></tr>
+        <tr><td colspan="5" class="loading">Loading jobs...</td></tr>
       </tbody>
     </table>
   </div>
