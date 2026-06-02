@@ -99,20 +99,20 @@ function renderRow(job) {
     ).join('');
     return `
 <tr class="${isNew ? 'is-new' : ''}">
-  <td>
+  <td data-label="Status">
     <select class="status-select" data-status="${escapeAttr(job.user_status)}"
             data-link="${escapeAttr(job.job_link)}">
       ${opts}
     </select>
   </td>
-  <td>
+  <td data-label="Title">
     <a class="job-title-link" href="${escapeAttr(job.job_link)}" target="_blank" rel="noopener noreferrer">
       ${escapeHtml(job.job_title)}
     </a>
   </td>
-  <td class="company">${escapeHtml(job.company_name)}</td>
-  <td class="location">${escapeHtml(job.location || '')}</td>
-  <td class="date ${isToday(job.posting_date) ? 'today' : ''}">${escapeHtml(formatDate(job.posting_date))}</td>
+  <td data-label="Company" class="company">${escapeHtml(job.company_name)}</td>
+  <td data-label="Location" class="location">${escapeHtml(job.location || '')}</td>
+  <td data-label="Posted" class="date ${isToday(job.posting_date) ? 'today' : ''}">${escapeHtml(formatDate(job.posting_date))}</td>
 </tr>`;
 }
 
